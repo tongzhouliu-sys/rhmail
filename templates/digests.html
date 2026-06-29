@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}日报列表 — 邮件分析{% endblock %}
+{% block body %}
+<h1 class="page-title">日报</h1>
+
+{% if items %}
+<ul class="digest-list full">
+  {% for d in items %}
+  <li>
+    <a href="/digests/{{ d.date }}">
+      <span class="digest-date">{{ d.date }}</span>
+      <span class="digest-meta">
+        共 {{ d.total_emails }} 封
+        {% if d.important_emails %} · <span class="highlight-text">需关注 {{ d.important_emails }} 封</span>{% endif %}
+      </span>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">暂无日报记录。</p>
+{% endif %}
+{% endblock %}

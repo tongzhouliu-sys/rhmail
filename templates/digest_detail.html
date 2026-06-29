@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ day }} 日报 — 邮件分析{% endblock %}
+{% block body %}
+<a href="/digests" class="back-link">&larr; 返回日报列表</a>
+
+<h1 class="page-title">{{ day }} 日报</h1>
+
+{% if items %}
+  {% for d in items %}
+  <div class="digest-block">
+    <div class="digest-stats">
+      共 {{ d.total_emails }} 封 · 需关注 {{ d.important_emails }} 封
+    </div>
+    <pre class="digest-content">{{ d.content_md }}</pre>
+  </div>
+  {% endfor %}
+{% else %}
+<p class="muted">该日期暂无日报。</p>
+{% endif %}
+{% endblock %}

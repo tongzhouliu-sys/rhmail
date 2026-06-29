@@ -1,0 +1,48 @@
+import os
+from dataclasses import dataclass, field
+
+
+def _accounts_from_env() -> list[dict]:
+    out, i = [], 1
+    while True:
+        email = os.environ.get(f"GMAIL_EMAIL_{i}")
+        token = os.environ.get(f"GMAIL_REFRESH_TOKEN_{i}")
+        if not email or not token:
+            break
+        out.append({"email": email, "refresh_token": token})
+        i += 1
+    return out
+
+
+@dataclass
+class Settings:
+    google_client_id: str = field(default_factory=lambda: os.environ["GOOGLE_CLIENT_ID"])
+    google_client_secret: str = field(default_factory=lambda: os.environ["GOOGLE_CLIENT_SECRET"])
+    gmail_accounts: list[dict] = field(default_factory=_accounts_from_env)
+
+    llm_api_base: str = field(default_factory=lambda: os.environ["LLM_API_BASE"])
+    llm_api_key: str = field(default_factory=lambda: os.environ["LLM_API_KEY"])
+    llm_model: str = field(default_factory=lambda: os.environ.get("LLM_MODEL", "gpt-4o-mini"))
+
+    database_url: str = field(default_factory=lambda: os.environ.get("DATABASE_URL", "sqlite:////app/data/app.db"))
+
+    dashboard_password: str = field(default_factory=lambda: os.environ["DASHBOARD_PASSWORD"])
+    secret_key: str = field(default_factory=lambda: os.environ["SECRET_KEY"])
+    session_lifetime_days: int = field(default_factory=lambda: int(os.environ.get("SESSION_LIFETIME_DAYS", "7")))
+
+    fetch_interval_minutes: int = field(default_factory=lambda: int(os.environ.get("FETCH_INTERVAL_MINUTES", "5")))
+    digest_hour: int = field(default_factory=lambda: int(os.environ.get("DIGEST_HOUR", "8")))
+    timezone: str = field(default_factory=lambda: os.environ.get("TZ", "Asia/Singapore"))
+    backfill_days: int = field(default_factory=lambda: int(os.environ.get("BACKFILL_DAYS", "2")))
+    body_max_chars: int = field(default_factory=lambda: int(os.environ.get("BODY_MAX_CHARS", "2000")))
+    summary_threshold: int = field(default_factory=lambda: int(os.environ.get("IMPORTANCE_SUMMARY_THRESHOLD", "4")))
+
+    whitelist_from: list[str] = field(default_factory=lambda: [
+        s for s in os.environ.get("WHITELIST_FROM", "").split(",") if s
+    ])
+    blacklist_from: list[str] = field(default_factory=lambda: [
+        s for s in os.environ.get("BLACKLIST_FROM", "").split(",") if s
+    ])
+
+
+settings = Settings()

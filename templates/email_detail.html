@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ m.subject }} — 邮件分析{% endblock %}
+{% block body %}
+<a href="/emails" class="back-link">&larr; 返回列表</a>
+
+<article class="detail-card">
+  <h1 class="detail-title">{{ m.subject }}</h1>
+  <div class="detail-meta">
+    <span>发件人:{{ m.from_name }} &lt;{{ m.from_email }}&gt;</span>
+    <span>{{ m.received_at.strftime('%Y-%m-%d %H:%M') if m.received_at else '' }}</span>
+  </div>
+
+  <div class="detail-badges">
+    <span class="cat-badge">{{ a.category }}</span>
+    <span class="imp imp{{ a.importance }}">重要度 {{ a.importance }}</span>
+  </div>
+
+  {% if a.one_line %}
+  <div class="detail-oneline">
+    <strong>摘要:</strong> {{ a.one_line }}
+  </div>
+  {% endif %}
+
+  {% if a.summary %}
+  <div class="detail-summary">
+    <strong>要点:</strong>
+    <p>{{ a.summary }}</p>
+  </div>
+  {% endif %}
+
+  <h2>正文</h2>
+  <pre class="email-body">{{ m.body_text }}</pre>
+</article>
+{% endblock %}

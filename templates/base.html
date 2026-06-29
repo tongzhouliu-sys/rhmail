@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}邮件分析{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a href="/" class="brand">&#128140; 邮件分析</a>
+    <nav>
+      <a href="/">概览</a>
+      <a href="/emails">邮件</a>
+      <a href="/digests">日报</a>
+      <form action="/logout" method="post" style="display:inline">
+        <button class="link-btn">登出</button>
+      </form>
+    </nav>
+  </header>
+  <main class="container">{% block body %}{% endblock %}</main>
+</body>
+</html>

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}概览 — 邮件分析{% endblock %}
+{% block body %}
+<h1 class="page-title">概览</h1>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-value">{{ total }}</div>
+    <div class="stat-label">已分析邮件</div>
+  </div>
+  <div class="stat-card highlight">
+    <div class="stat-value">{{ important }}</div>
+    <div class="stat-label">需关注 (重要度 ≥4)</div>
+  </div>
+</div>
+
+<h2>按分类统计</h2>
+<div class="cat-grid">
+  {% for cat in categories %}
+  <div class="cat-card">
+    <div class="cat-name">{{ cat }}</div>
+    <div class="cat-count">{{ by_cat.get(cat, 0) }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<h2>最近日报</h2>
+{% if digests %}
+<ul class="digest-list">
+  {% for d in digests %}
+  <li>
+    <a href="/digests/{{ d.date }}">
+      <span class="digest-date">{{ d.date }}</span>
+      <span class="digest-meta">共 {{ d.total_emails }} 封,需关注 {{ d.important_emails }} 封</span>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">暂无日报。每天 {{ "08:00" }} 自动生成。</p>
+{% endif %}
+{% endblock %}

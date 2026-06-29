@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}邮件列表 — 邮件分析{% endblock %}
+{% block body %}
+<h1 class="page-title">邮件列表</h1>
+
+<form class="filters" method="get" action="/emails">
+  <select name="category">
+    <option value="">全部分类</option>
+    {% for c in categories %}
+    <option value="{{ c }}" {% if f.category == c %}selected{% endif %}>{{ c }}</option>
+    {% endfor %}
+  </select>
+  <select name="importance">
+    <option value="0">全部重要度</option>
+    {% for i in [5, 4, 3, 2, 1] %}
+    <option value="{{ i }}" {% if f.importance == i %}selected{% endif %}>Level {{ i }}</option>
+    {% endfor %}
+  </select>
+  <input type="date" name="date_from" value="{{ f.date_from }}">
+  <span class="filter-sep">至</span>
+  <input type="date" name="date_to" value="{{ f.date_to }}">
+  <button type="submit">筛选</button>
+  <a href="/emails" class="btn-reset">重置</a>
+</form>
+
+<p class="muted">共 {{ total }} 封</p>
+
+<ul class="email-list">
+  {% for m, a in rows %}
+  <li class="email-item">
+    <a href="/emails/{{ m.id }}">
+      <div class="email-row1">
+        <span class="email-subject">{{ a.one_line or m.subject }}</span>
+        <span class="imp imp{{ a.importance }}">{{ a.importance }}</span>
+      </div>
+      <div class="email-row2">
+        <span class="cat-badge">{{ a.category }}</span>
+        <span class="email-from">{{ m.from_email }}</span>
+        <span class="email-time">{{ m.received_at.strftime('%Y-%m-%d %H:%M') if m.received_at else '' }}</span>
+      </div>
+    </a>
+  </li>
+  {% else %}
+  <li class="muted" style="padding:2rem 0;">暂无邮件</li>
+  {% endfor %}
+</ul>
+
+<nav class="pager">
+  {% if page > 1 %}
+  <a href="?category={{ f.category }}&importance={{ f.importance }}&date_from={{ f.date_from }}&date_to={{ f.date_to }}&page={{ page - 1 }}">&larr; 上一页</a>
+  {% endif %}
+  <span>第 {{ page }} / {{ pages }} 页</span>
+  {% if page < pages %}
+  <a href="?category={{ f.category }}&importance={{ f.importance }}&date_from={{ f.date_from }}&date_to={{ f.date_to }}&page={{ page + 1 }}">下一页 &rarr;</a>
+  {% endif %}
+</nav>
+{% endblock %}
