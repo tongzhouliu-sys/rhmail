@@ -45,6 +45,9 @@ def get_category_slug(cat_name: str) -> str:
     return REV_CATEGORY_MAP.get(cat_name, cat_name)
 
 
+templates.env.filters["cat_slug"] = get_category_slug
+
+
 def get_sidebar_context(db):
     by_cat = dict(
         db.execute(
@@ -325,9 +328,10 @@ def get_redirect_uri(request: Request) -> str:
     return f"{scheme}://{request.url.netloc}/oauth/callback"
 
 
-@app.get("/accounts/add", dependencies=[Depends(require_page)])
+@app.get("/accounts/add")
+@app.get("/auth/google")
 async def accounts_add(request: Request):
-    """Initiate the Google OAuth flow to add a new Gmail account."""
+    """Initiate the Google OAuth flow to add a Gmail account and auto-authenticate dashboard session."""
     state = oauth.generate_state()
     redirect_uri = get_redirect_uri(request)
     auth_url = oauth.get_auth_url(state, redirect_uri=redirect_uri)
@@ -343,7 +347,7 @@ async def oauth_callback(
     state: str = Query(""),
     error: str = Query(""),
 ):
-    """Handle the Google OAuth callback after user grants access."""
+    """Handle the Google OAuth callback, update database and issue dashboard session cookie for auto-login."""
     if error:
         log.warning("OAuth callback error: %s", error)
         return RedirectResponse(f"/accounts?msg=授权失败: {error}", status_code=302)
@@ -371,19 +375,28 @@ async def oauth_callback(
             existing.needs_reauth = False
             existing.is_active = True
             existing.added_via = "oauth"
-            msg = f"已更新邮箱 {result['email']} 的授权"
+            msg = f"已成功通过 Google 授权登录，更新邮箱 {result['email']}"
         else:
             db.add(GmailAccount(
                 email=result["email"],
                 refresh_token=result["refresh_token"],
                 added_via="oauth",
             ))
-            msg = f"成功添加邮箱 {result['email']}"
+            msg = f"已成功添加并授权邮箱 {result['email']}"
         db.commit()
     finally:
         db.close()
 
     resp = RedirectResponse(f"/accounts?msg={msg}", status_code=302)
+    # Auto-login to dashboard session upon successful Google OAuth
+    resp.set_cookie(
+        COOKIE_NAME,
+        make_cookie(),
+        max_age=settings.session_lifetime_days * 86400,
+        httponly=True,
+        samesite="lax",
+        secure=True,
+    )
     resp.delete_cookie("oauth_state")
     return resp
 

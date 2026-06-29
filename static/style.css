@@ -1003,17 +1003,117 @@ h2::before {
 .imp4 { background: rgba(249, 115, 22, 0.15); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); }
 .imp5 { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); }
 
-.cat-badge {
+/* ---- Category Badges & System Styles ---- */
+:root {
+  --cat-urgent-color: #f43f5e;
+  --cat-urgent-bg: rgba(244, 63, 94, 0.12);
+  --cat-urgent-border: rgba(244, 63, 94, 0.3);
+
+  --cat-finance-color: #10b981;
+  --cat-finance-bg: rgba(16, 185, 129, 0.12);
+  --cat-finance-border: rgba(16, 185, 129, 0.3);
+
+  --cat-legal-color: #a855f7;
+  --cat-legal-bg: rgba(168, 85, 247, 0.12);
+  --cat-legal-border: rgba(168, 85, 247, 0.3);
+
+  --cat-notice-color: #f59e0b;
+  --cat-notice-bg: rgba(245, 158, 11, 0.12);
+  --cat-notice-border: rgba(245, 158, 11, 0.3);
+
+  --cat-marketing-color: #06b6d4;
+  --cat-marketing-bg: rgba(6, 182, 212, 0.12);
+  --cat-marketing-border: rgba(6, 182, 212, 0.3);
+
+  --cat-social-color: #ec4899;
+  --cat-social-bg: rgba(236, 72, 153, 0.12);
+  --cat-social-border: rgba(236, 72, 153, 0.3);
+}
+
+.cat-icon {
+  flex-shrink: 0;
   display: inline-block;
+  vertical-align: middle;
+  transition: transform 0.2s ease, filter 0.2s ease, color 0.2s ease;
+}
+
+.cat-icon-urgent { color: var(--cat-urgent-color); }
+.cat-icon-finance { color: var(--cat-finance-color); }
+.cat-icon-legal { color: var(--cat-legal-color); }
+.cat-icon-notice { color: var(--cat-notice-color); }
+.cat-icon-marketing { color: var(--cat-marketing-color); }
+.cat-icon-social { color: var(--cat-social-color); }
+
+.sidebar-item:hover .cat-icon-urgent, .sidebar-item.active .cat-icon-urgent { transform: scale(1.2); filter: drop-shadow(0 0 5px var(--cat-urgent-color)); }
+.sidebar-item:hover .cat-icon-finance, .sidebar-item.active .cat-icon-finance { transform: scale(1.2); filter: drop-shadow(0 0 5px var(--cat-finance-color)); }
+.sidebar-item:hover .cat-icon-legal, .sidebar-item.active .cat-icon-legal { transform: scale(1.2); filter: drop-shadow(0 0 5px var(--cat-legal-color)); }
+.sidebar-item:hover .cat-icon-notice, .sidebar-item.active .cat-icon-notice { transform: scale(1.2); filter: drop-shadow(0 0 5px var(--cat-notice-color)); }
+.sidebar-item:hover .cat-icon-marketing, .sidebar-item.active .cat-icon-marketing { transform: scale(1.2); filter: drop-shadow(0 0 5px var(--cat-marketing-color)); }
+.sidebar-item:hover .cat-icon-social, .sidebar-item.active .cat-icon-social { transform: scale(1.2); filter: drop-shadow(0 0 5px var(--cat-social-color)); }
+
+.cat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 11px;
-  font-weight: 700;
-  padding: 2px 10px;
+  font-weight: 600;
+  padding: 3px 10px;
   border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border);
   color: var(--text-muted);
   white-space: nowrap;
+  transition: all 0.2s ease;
 }
+
+.cat-badge-urgent, .cat-badge-紧急·需回复 {
+  background: var(--cat-urgent-bg);
+  border-color: var(--cat-urgent-border);
+  color: var(--cat-urgent-color);
+}
+.cat-badge-finance, .cat-badge-金融·账户告警 {
+  background: var(--cat-finance-bg);
+  border-color: var(--cat-finance-border);
+  color: var(--cat-finance-color);
+}
+.cat-badge-legal, .cat-badge-法律·合同 {
+  background: var(--cat-legal-bg);
+  border-color: var(--cat-legal-border);
+  color: var(--cat-legal-color);
+}
+.cat-badge-notice, .cat-badge-重要通知 {
+  background: var(--cat-notice-bg);
+  border-color: var(--cat-notice-border);
+  color: var(--cat-notice-color);
+}
+.cat-badge-marketing, .cat-badge-订阅·营销 {
+  background: var(--cat-marketing-bg);
+  border-color: var(--cat-marketing-border);
+  color: var(--cat-marketing-color);
+}
+.cat-badge-social, .cat-badge-社交其他 {
+  background: var(--cat-social-bg);
+  border-color: var(--cat-social-border);
+  color: var(--cat-social-color);
+}
+
+.cat-card {
+  position: relative;
+  overflow: hidden;
+}
+.cat-card-urgent { border-top: 3px solid var(--cat-urgent-color); }
+.cat-card-finance { border-top: 3px solid var(--cat-finance-color); }
+.cat-card-legal { border-top: 3px solid var(--cat-legal-color); }
+.cat-card-notice { border-top: 3px solid var(--cat-notice-color); }
+.cat-card-marketing { border-top: 3px solid var(--cat-marketing-color); }
+.cat-card-social { border-top: 3px solid var(--cat-social-color); }
+
+.cat-card-urgent .cat-bar { background: var(--cat-urgent-color) !important; }
+.cat-card-finance .cat-bar { background: var(--cat-finance-color) !important; }
+.cat-card-legal .cat-bar { background: var(--cat-legal-color) !important; }
+.cat-card-notice .cat-bar { background: var(--cat-notice-color) !important; }
+.cat-card-marketing .cat-bar { background: var(--cat-marketing-color) !important; }
+.cat-card-social .cat-bar { background: var(--cat-social-color) !important; }
 
 /* ---- Pagination ---- */
 .pager {
@@ -1326,4 +1426,43 @@ body.login-page {
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  margin: 1.25rem 0;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.login-divider::before, .login-divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid var(--border);
+}
+.login-divider span {
+  padding: 0 0.75rem;
+}
+
+.login-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-main);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+.login-google-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--primary);
+  color: #ffffff;
+  transform: translateY(-1px);
 }

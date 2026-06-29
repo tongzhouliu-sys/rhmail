@@ -1,12 +1,13 @@
 {% extends "base.html" %}
+{% from "macros.html" import cat_icon, cat_badge %}
 {% block title %}邮件列表 — RHMail AI 智能分析{% endblock %}
 {% block body %}
 
 <div class="content-header">
   <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
-    <h1 class="page-title" style="margin-bottom:0; font-size: 20px;">
+    <h1 class="page-title" style="margin-bottom:0; font-size: 20px; display:flex; align-items:center; gap:0.5rem;">
       {% if f.category_name %}
-        分类：{{ f.category_name }}
+        <span>分类：</span>{{ cat_badge(f.category_name, extra_style="font-size:15px; padding:4px 14px;") }}
       {% elif f.importance >= 4 %}
         重点关注邮件列表
       {% else %}
@@ -67,7 +68,7 @@
 
         <!-- 4. 分类 Badge -->
         <div class="row-category">
-          <span class="cat-badge">{{ a.category }}</span>
+          {{ cat_badge(a.category) }}
         </div>
 
         <!-- 5. 接收时间 -->

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import cat_icon %}
 {% block title %}概览 — RHMail AI 智能看板{% endblock %}
 {% block body %}
 
@@ -50,10 +51,10 @@
   {% for cat in categories %}
   {% set count = by_cat.get(cat.name, 0) %}
   {% set pct = (count / total * 100) if total > 0 else 0 %}
-  <a href="/emails?category={{ cat.slug }}" class="cat-card clickable-card">
+  <a href="/emails?category={{ cat.slug }}" class="cat-card cat-card-{{ cat.slug }} clickable-card">
     <div class="cat-name">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>
-      {{ cat.name }}
+      {{ cat_icon(cat.slug, size=15) }}
+      <span>{{ cat.name }}</span>
     </div>
     <div class="cat-count">{{ count }}</div>
     <div class="cat-progress">
