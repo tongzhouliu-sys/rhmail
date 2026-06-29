@@ -45,6 +45,22 @@ def get_category_slug(cat_name: str) -> str:
     return REV_CATEGORY_MAP.get(cat_name, cat_name)
 
 
+def get_sidebar_context(db):
+    by_cat = dict(
+        db.execute(
+            select(AnalysisResult.category, func.count()).group_by(AnalysisResult.category)
+        ).all()
+    )
+    important_count = db.scalar(
+        select(func.count(AnalysisResult.id)).where(AnalysisResult.importance >= 4)
+    ) or 0
+    return {
+        "categories": CATEGORIES_LIST,
+        "by_cat": by_cat,
+        "important_count": important_count,
+    }
+
+
 scheduler = AsyncIOScheduler(timezone=settings.timezone)
 
 
