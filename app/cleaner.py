@@ -1,3 +1,4 @@
+import html
 import re
 from bs4 import BeautifulSoup
 from app.config import settings

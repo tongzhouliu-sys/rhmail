@@ -318,6 +318,18 @@ async def accounts_page(request: Request, msg: str = Query("")):
         }
         ctx.update(get_sidebar_context(db))
         return templates.TemplateResponse("accounts.html", ctx)
+    except Exception:
+        # Never let a DB/render error turn the whole page into a raw 500.
+        log.exception("Failed to render accounts page")
+        ctx = {
+            "request": request,
+            "accounts": [],
+            "msg": msg or "加载邮箱列表时出错，请稍后重试或查看服务端日志。",
+            "categories": CATEGORIES_LIST,
+            "by_cat": {},
+            "important_count": 0,
+        }
+        return templates.TemplateResponse("accounts.html", ctx, status_code=200)
     finally:
         db.close()
 
@@ -387,6 +399,12 @@ async def oauth_callback(
             ))
             msg = f"已成功添加并授权邮箱 {result['email']}"
         db.commit()
+    except Exception:
+        # Authorization with Google succeeded but persisting the account failed;
+        # surface a friendly message instead of a raw 500.
+        db.rollback()
+        log.exception("Failed to save OAuth account for %s", result.get("email"))
+        return RedirectResponse("/accounts?msg=保存账号失败，请重试或查看服务端日志。", status_code=302)
     finally:
         db.close()
 

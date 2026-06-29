@@ -260,7 +260,7 @@ sequenceDiagram
 | 模块文件 | 核心职责 | 输入 | 输出 | 关键类 / 函数 | 盲目修改风险 |
 |---|---|---|---|---|---|
 | `app/config.py` | 环境变量读取与全局单例 `settings` 构建 | 环境变量 (`os.environ`) | `Settings` dataclass 实例 | `Settings`, `_accounts_from_env()` | ⚠️ **高**。包含多账号解析逻辑，修改可能导致配置无法加载或字段丢失。 |
-| `app/db.py` | 数据库 Engine 与 Session 管理 | `settings.database_url` | SQLAlchemy `engine`, `SessionLocal`, `init_db()` | `init_db()`, `SessionLocal` | ⚠️ **高**。SQLite 驱动包含 `check_same_thread: False` 配置。 |
+| `app/db.py` | 数据库 Engine 与 Session 管理 + 轻量自动补列迁移 | `settings.database_url` | SQLAlchemy `engine`, `SessionLocal`, `init_db()` | `init_db()`, `_ensure_columns()`, `SessionLocal` | ⚠️ **高**。SQLite 驱动包含 `check_same_thread: False` 配置；`init_db()` 在 `create_all()` 后会调用 `_ensure_columns()` 对已存在表执行幂等 `ALTER TABLE ADD COLUMN` 补齐模型新增列。 |
 | `app/models.py` | 声明式 ORM 实体映射 | 无 | ORM Model 类 | `GmailAccount`, `GmailMessage`, `AnalysisResult`, `DailyDigest` | ⚠️ **极高**。改动直接影响数据库表结构及外键关联。 |
 | `app/gmail.py` | Gmail API 交互与增量数据抓取 | `refresh_token`, `last_history_id` | 原始邮件字典列表、`new_history_id` | `build_service()`, `fetch_new()`, `list_added_ids_via_history()` | ⚠️ **高**。含 History API 报错 404 回退机制及 Base64URL 解码。 |
 | `app/prefilter.py` | 规则过滤 | 邮件字典 | `bool` (是否过滤) | `should_filter_out()` | 🟢 **中**。注意黑白名单与正则的匹配优先级。 |
@@ -274,6 +274,8 @@ sequenceDiagram
 ---
 
 ## 6. 数据库设计说明 (Database Design)
+
+> 📌 **表结构演进与自动补列**：项目不使用 Alembic。`init_db()`（`app/db.py`）在 `Base.metadata.create_all()` 之后调用 `_ensure_columns()`，用 `inspect(engine)` 对比模型与实库列，对**已存在表缺失的列**执行幂等的 `ALTER TABLE ... ADD COLUMN`（兼容 SQLite/PostgreSQL）。这解决了 `create_all` 只新建表、不给旧表补列导致的 `OperationalError: no such column` 历史问题（例如旧库缺 `gmail_accounts.last_sync_at` / `added_via`）。新增 ORM 列时，启动或运行 CLI 即自动补齐，无需手工改库；但**重命名/删除/改类型仍需手工迁移**。
 
 系统使用 SQLAlchemy 2.0 ORM 定义了 4 张核心数据表：
 
