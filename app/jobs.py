@@ -137,9 +137,19 @@ if __name__ == "__main__":
     cmd = sys.argv[1] if len(sys.argv) > 1 else ""
     init_db()
     if cmd == "fetch":
+        log.info("🚀 启动邮件同步与分析任务 (fetch)...")
         asyncio.run(fetch_and_analyze())
+        log.info("✅ 邮件同步与分析任务完成并退出。")
     elif cmd == "digest":
+        log.info("🚀 启动每日生成日报任务 (digest)...")
         asyncio.run(run_daily_digest())
+        log.info("✅ 每日生成日报任务完成并退出。")
+    elif cmd in ("all", "sync"):
+        log.info("🚀 启动全量任务 (fetch + digest)...")
+        asyncio.run(fetch_and_analyze())
+        asyncio.run(run_daily_digest())
+        log.info("✅ 全量任务完成并退出。")
     else:
-        print("Usage: python -m app.jobs fetch | digest", file=sys.stderr)
+        print("Usage: python -m app.jobs [fetch|digest|all|sync]", file=sys.stderr)
         sys.exit(1)
+
