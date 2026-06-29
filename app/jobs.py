@@ -46,33 +46,34 @@ async def fetch_and_analyze() -> None:  # noqa: C901
                 continue
 
             for msg in messages:
-                exists = db.scalar(
-                    select(GmailMessage.id).where(
+                row = db.scalar(
+                    select(GmailMessage).where(
                         GmailMessage.account_id == acc.id,
                         GmailMessage.message_id == msg["message_id"],
                     )
                 )
-                if exists:
-                    continue
-
                 filtered = prefilter.should_filter_out(msg)
-                row = GmailMessage(
-                    account_id=acc.id,
-                    message_id=msg["message_id"],
-                    from_email=msg["from_email"],
-                    from_name=msg["from_name"],
-                    subject=msg["subject"],
-                    received_at=msg["received_at"],
-                    is_filtered=filtered,
-                    body_text=cleaner.clean_body(msg["body_text"], msg["body_html"]),
-                )
-                db.add(row)
-                db.flush()
+                if not row:
+                    row = GmailMessage(
+                        account_id=acc.id,
+                        message_id=msg["message_id"],
+                        from_email=msg["from_email"],
+                        from_name=msg["from_name"],
+                        subject=msg["subject"],
+                        received_at=msg["received_at"],
+                        is_filtered=filtered,
+                        body_text=cleaner.clean_body(msg["body_text"], msg["body_html"]),
+                    )
+                    db.add(row)
+                    db.flush()
+                else:
+                    row.is_filtered = filtered
 
-                if not filtered:
+                has_analysis = db.scalar(select(AnalysisResult.id).where(AnalysisResult.message_pk == row.id))
+                if not filtered and not has_analysis:
                     res = await analyzer.analyze({
-                        "from_email": msg["from_email"],
-                        "subject": msg["subject"],
+                        "from_email": row.from_email,
+                        "subject": row.subject,
                         "body_text": row.body_text,
                     })
                     db.add(AnalysisResult(
@@ -88,6 +89,43 @@ async def fetch_and_analyze() -> None:  # noqa: C901
             acc.last_history_id = new_hid
             db.commit()
             log.info("synced %s: %d new", acc.email, len(messages))
+    finally:
+        db.close()
+
+
+async def reanalyze_unanalyzed_messages() -> None:
+    db = SessionLocal()
+    try:
+        rows = db.scalars(
+            select(GmailMessage).where(
+                ~select(AnalysisResult.id).where(AnalysisResult.message_pk == GmailMessage.id).exists()
+            )
+        ).all()
+        log.info("未分析邮件共计 %d 封，开始重新触发分析...", len(rows))
+        count = 0
+        for row in rows:
+            filtered = prefilter.should_filter_out({
+                "from_email": row.from_email,
+                "subject": row.subject,
+            })
+            row.is_filtered = filtered
+            if not filtered:
+                res = await analyzer.analyze({
+                    "from_email": row.from_email,
+                    "subject": row.subject,
+                    "body_text": row.body_text,
+                })
+                db.add(AnalysisResult(
+                    message_pk=row.id,
+                    category=res["category"],
+                    importance=res["importance"],
+                    one_line=res["one_line"],
+                    summary=res["summary"],
+                    model_used=res["model_used"],
+                ))
+                count += 1
+            db.commit()
+        log.info("✅ 补全分析完成，共成功分析 %d 封邮件。", count)
     finally:
         db.close()
 
@@ -144,12 +182,17 @@ if __name__ == "__main__":
         log.info("🚀 启动每日生成日报任务 (digest)...")
         asyncio.run(run_daily_digest())
         log.info("✅ 每日生成日报任务完成并退出。")
+    elif cmd == "reanalyze":
+        log.info("🚀 启动数据库存量邮件补全分析任务 (reanalyze)...")
+        asyncio.run(reanalyze_unanalyzed_messages())
+        log.info("✅ 存量邮件补全分析完成。")
     elif cmd in ("all", "sync"):
         log.info("🚀 启动全量任务 (fetch + digest)...")
         asyncio.run(fetch_and_analyze())
+        asyncio.run(reanalyze_unanalyzed_messages())
         asyncio.run(run_daily_digest())
         log.info("✅ 全量任务完成并退出。")
     else:
-        print("Usage: python -m app.jobs [fetch|digest|all|sync]", file=sys.stderr)
+        print("Usage: python -m app.jobs [fetch|digest|reanalyze|all|sync]", file=sys.stderr)
         sys.exit(1)
 

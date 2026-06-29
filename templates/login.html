@@ -4,6 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>登录 — RHMail AI 智能看板</title>
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('rhmail_theme') || 'dark-indigo';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+  </script>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="login-page">

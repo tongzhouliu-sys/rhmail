@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-:root {
+:root, html[data-theme="dark-indigo"] {
   --bg-base: #090d16;
   --bg-radial: radial-gradient(circle at 50% -20%, #1e1b4b 0%, #090d16 80%);
   --surface: rgba(20, 26, 40, 0.65);
@@ -19,7 +19,92 @@
   --primary-glow: rgba(99, 102, 241, 0.35);
   --accent-grad: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   --accent-grad-glow: linear-gradient(135deg, rgba(99, 102, 241, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%);
+
+  --topbar-bg: rgba(15, 21, 33, 0.75);
+  --hero-bg: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%);
+  --hero-title-grad: linear-gradient(to right, #ffffff, #94a3b8);
+  --dropdown-bg: rgba(19, 25, 38, 0.95);
+}
+
+html[data-theme="light"] {
+  --bg-base: #f8fafc;
+  --bg-radial: radial-gradient(circle at 50% -20%, #e0e7ff 0%, #f8fafc 80%);
+  --surface: rgba(255, 255, 255, 0.85);
+  --surface-hover: rgba(241, 245, 249, 0.95);
+  --surface-solid: #ffffff;
+  --surface2: rgba(0, 0, 0, 0.03);
+  --border: rgba(203, 213, 225, 0.7);
+  --border-hover: rgba(99, 102, 241, 0.5);
   
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --text-dim: #64748b;
+  
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-glow: rgba(79, 70, 229, 0.2);
+  --accent-grad: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  --accent-grad-glow: linear-gradient(135deg, rgba(79, 70, 229, 0.12) 0%, rgba(124, 58, 237, 0.12) 100%);
+  
+  --topbar-bg: rgba(255, 255, 255, 0.82);
+  --hero-bg: linear-gradient(135deg, rgba(238, 242, 255, 0.85) 0%, rgba(243, 244, 246, 0.85) 100%);
+  --hero-title-grad: linear-gradient(to right, #0f172a, #334155);
+  --dropdown-bg: rgba(255, 255, 255, 0.96);
+}
+
+html[data-theme="emerald"] {
+  --bg-base: #061712;
+  --bg-radial: radial-gradient(circle at 50% -20%, #064e3b 0%, #061712 80%);
+  --surface: rgba(11, 36, 29, 0.7);
+  --surface-hover: rgba(16, 50, 40, 0.85);
+  --surface-solid: #0d2c24;
+  --surface2: rgba(255, 255, 255, 0.04);
+  --border: rgba(52, 211, 153, 0.18);
+  --border-hover: rgba(16, 185, 129, 0.5);
+  
+  --text-main: #ecfdf5;
+  --text-muted: #a7f3d0;
+  --text-dim: #6ee7b7;
+  
+  --primary: #10b981;
+  --primary-hover: #059669;
+  --primary-glow: rgba(16, 185, 129, 0.35);
+  --accent-grad: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+  --accent-grad-glow: linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(6, 182, 212, 0.18) 100%);
+  
+  --topbar-bg: rgba(8, 28, 22, 0.8);
+  --hero-bg: linear-gradient(135deg, rgba(6, 78, 59, 0.4) 0%, rgba(6, 23, 18, 0.7) 100%);
+  --hero-title-grad: linear-gradient(to right, #ffffff, #a7f3d0);
+  --dropdown-bg: rgba(13, 44, 36, 0.95);
+}
+
+html[data-theme="violet"] {
+  --bg-base: #14091f;
+  --bg-radial: radial-gradient(circle at 50% -20%, #4c1d95 0%, #14091f 80%);
+  --surface: rgba(32, 17, 48, 0.7);
+  --surface-hover: rgba(46, 25, 68, 0.85);
+  --surface-solid: #241337;
+  --surface2: rgba(255, 255, 255, 0.04);
+  --border: rgba(216, 180, 254, 0.18);
+  --border-hover: rgba(168, 85, 247, 0.5);
+  
+  --text-main: #faf5ff;
+  --text-muted: #e9d5ff;
+  --text-dim: #c084fc;
+  
+  --primary: #a855f7;
+  --primary-hover: #9333ea;
+  --primary-glow: rgba(168, 85, 247, 0.35);
+  --accent-grad: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  --accent-grad-glow: linear-gradient(135deg, rgba(168, 85, 247, 0.18) 0%, rgba(236, 72, 153, 0.18) 100%);
+  
+  --topbar-bg: rgba(20, 9, 31, 0.8);
+  --hero-bg: linear-gradient(135deg, rgba(76, 29, 149, 0.4) 0%, rgba(20, 9, 31, 0.7) 100%);
+  --hero-title-grad: linear-gradient(to right, #ffffff, #e9d5ff);
+  --dropdown-bg: rgba(36, 19, 55, 0.95);
+}
+
+:root {
   --imp1: #64748b;
   --imp2: #3b82f6;
   --imp3: #10b981;
@@ -31,9 +116,9 @@
   --radius-lg: 20px;
   --radius-full: 9999px;
   
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.35);
   --shadow-glow: 0 0 25px var(--primary-glow);
   
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -81,7 +166,7 @@ a {
   transition: var(--transition);
 }
 a:hover {
-  color: #a5b4fc;
+  color: var(--primary-hover);
 }
 
 /* ---- Topbar Header ---- */
@@ -91,7 +176,7 @@ a:hover {
   justify-content: space-between;
   padding: 0 2rem;
   height: 64px;
-  background: rgba(15, 21, 33, 0.75);
+  background: var(--topbar-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
@@ -175,6 +260,141 @@ a:hover {
   background: rgba(239, 68, 68, 0.1);
 }
 
+/* ---- Theme Switcher Picker ---- */
+.theme-picker {
+  position: relative;
+  display: inline-block;
+}
+
+.theme-picker-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: var(--font-sans);
+}
+
+.theme-picker-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+}
+
+.theme-picker-btn .chevron-icon {
+  transition: transform 0.2s ease;
+  color: var(--text-muted);
+}
+
+.theme-picker.open .chevron-icon {
+  transform: rotate(180deg);
+}
+
+.theme-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 190px;
+  background: var(--dropdown-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.5rem;
+  box-shadow: var(--shadow-lg);
+  z-index: 200;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  animation: themeMenuFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.theme-picker.open .theme-menu {
+  display: flex;
+}
+
+@keyframes themeMenuFadeIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.theme-menu-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 2px;
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: var(--transition);
+}
+
+.theme-option:hover {
+  background: var(--surface2);
+  color: var(--text-main);
+}
+
+.theme-option.active {
+  background: var(--accent-grad-glow);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.theme-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.dark-indigo-swatch {
+  background: linear-gradient(135deg, #6366f1 50%, #090d16 50%);
+}
+.light-swatch {
+  background: linear-gradient(135deg, #4f46e5 50%, #f8fafc 50%);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+.emerald-swatch {
+  background: linear-gradient(135deg, #10b981 50%, #061712 50%);
+}
+.violet-swatch {
+  background: linear-gradient(135deg, #a855f7 50%, #14091f 50%);
+}
+
+.theme-option .check-icon {
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.theme-option.active .check-icon {
+  opacity: 1;
+}
+
 /* ---- Container Layout ---- */
 .container {
   max-width: 1080px;
@@ -188,7 +408,7 @@ a:hover {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 2rem;
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%);
+  background: var(--hero-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 1.5rem 2rem;
@@ -212,7 +432,9 @@ a:hover {
   font-size: 24px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  background: linear-gradient(to right, #fff, #94a3b8);
+  background: var(--hero-title-grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 0.25rem;

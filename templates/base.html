@@ -4,6 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}RHMail — AI 智能邮件分析{% endblock %}</title>
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('rhmail_theme') || 'dark-indigo';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+  </script>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -17,26 +23,69 @@
       </div>
       <span>RHMail AI</span>
     </a>
-    <nav>
-      <a href="/" class="nav-link" id="nav-dashboard">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-        概览
-      </a>
-      <a href="/emails" class="nav-link" id="nav-emails">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-        邮件
-      </a>
-      <a href="/digests" class="nav-link" id="nav-digests">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-        日报
-      </a>
-      <form action="/logout" method="post" style="display:inline">
-        <button class="link-btn" title="安全退出">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-          登出
+    <div class="topbar-right" style="display: flex; align-items: center; gap: 0.75rem;">
+      <nav>
+        <a href="/" class="nav-link" id="nav-dashboard">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          概览
+        </a>
+        <a href="/emails" class="nav-link" id="nav-emails">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+          邮件
+        </a>
+        <a href="/digests" class="nav-link" id="nav-digests">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+          日报
+        </a>
+        <form action="/logout" method="post" style="display:inline">
+          <button class="link-btn" title="安全退出">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            登出
+          </button>
+        </form>
+      </nav>
+
+      <!-- 皮肤切换组件 -->
+      <div class="theme-picker" id="themePicker">
+        <button class="theme-picker-btn" id="themePickerBtn" title="切换主题皮肤" aria-label="切换主题皮肤">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"></circle>
+            <circle cx="17.5" cy="10.5" r=".5" fill="currentColor"></circle>
+            <circle cx="8.5" cy="7.5" r=".5" fill="currentColor"></circle>
+            <circle cx="6.5" cy="12.5" r=".5" fill="currentColor"></circle>
+            <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.92 0 1.7-.72 1.7-1.61 0-.43-.17-.83-.44-1.13-.27-.3-.42-.69-.42-1.12 0-.9.72-1.64 1.61-1.64h1.9c3.1 0 5.65-2.55 5.65-5.65 0-4.85-4.4-8.86-9.9-8.86z"></path>
+          </svg>
+          <span class="theme-picker-label">皮肤</span>
+          <svg class="chevron-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
         </button>
-      </form>
-    </nav>
+        
+        <div class="theme-menu" id="themeMenu">
+          <div class="theme-menu-title">选择系统皮肤</div>
+          <button class="theme-option" data-theme-id="dark-indigo">
+            <span class="theme-swatch dark-indigo-swatch"></span>
+            <span class="theme-name">深邃星空</span>
+            <svg class="check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </button>
+          <button class="theme-option" data-theme-id="light">
+            <span class="theme-swatch light-swatch"></span>
+            <span class="theme-name">极简日光</span>
+            <svg class="check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </button>
+          <button class="theme-option" data-theme-id="emerald">
+            <span class="theme-swatch emerald-swatch"></span>
+            <span class="theme-name">翡翠极光</span>
+            <svg class="check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </button>
+          <button class="theme-option" data-theme-id="violet">
+            <span class="theme-swatch violet-swatch"></span>
+            <span class="theme-name">紫罗兰暗影</span>
+            <svg class="check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </button>
+        </div>
+      </div>
+    </div>
   </header>
   <main class="container">
     {% block body %}{% endblock %}
@@ -51,6 +100,44 @@
       } else if (path.startsWith('/digests')) {
         document.getElementById('nav-digests')?.classList.add('active');
       }
+
+      // 皮肤切换交互逻辑
+      const themePicker = document.getElementById('themePicker');
+      const themePickerBtn = document.getElementById('themePickerBtn');
+      const themeOptions = document.querySelectorAll('.theme-option');
+
+      function updateActiveThemeUI(currentTheme) {
+        themeOptions.forEach(opt => {
+          if (opt.getAttribute('data-theme-id') === currentTheme) {
+            opt.classList.add('active');
+          } else {
+            opt.classList.remove('active');
+          }
+        });
+      }
+
+      const initialTheme = localStorage.getItem('rhmail_theme') || 'dark-indigo';
+      updateActiveThemeUI(initialTheme);
+
+      themePickerBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        themePicker?.classList.toggle('open');
+      });
+
+      document.addEventListener('click', () => {
+        themePicker?.classList.remove('open');
+      });
+
+      themeOptions.forEach(opt => {
+        opt.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const themeId = opt.getAttribute('data-theme-id');
+          document.documentElement.setAttribute('data-theme', themeId);
+          localStorage.setItem('rhmail_theme', themeId);
+          updateActiveThemeUI(themeId);
+          themePicker?.classList.remove('open');
+        });
+      });
     });
   </script>
 </body>
