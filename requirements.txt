@@ -10,4 +10,5 @@ google-auth==2.30.0
 google-auth-oauthlib==1.2.0
 google-api-python-client==2.134.0
 psycopg[binary]==3.1.19
+psycopg2-binary==2.9.9
 tzdata==2024.1

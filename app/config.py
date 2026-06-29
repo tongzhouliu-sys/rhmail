@@ -20,9 +20,12 @@ def _accounts_from_env() -> list[dict]:
 
 def _get_database_url() -> str:
     url = os.environ.get("DATABASE_URL", "sqlite:////app/data/app.db")
-    # Railway PostgreSQL 插件注入的连接串通常以 postgres:// 开头，SQLAlchemy 2.0 需替换为 postgresql://
+    # Railway PostgreSQL 插件注入的连接串通常以 postgres:// 或 postgresql:// 开头
+    # SQLAlchemy 配合 psycopg v3 (psycopg[binary]) 时需使用 postgresql+psycopg:// 协议头
     if url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql://", 1)
+        url = url.replace("postgres://", "postgresql+psycopg://", 1)
+    elif url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
     return url
 
 
