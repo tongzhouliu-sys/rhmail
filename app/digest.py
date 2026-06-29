@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+from app.cleaner import summary_plaintext
+
 CATEGORY_ORDER = ["紧急·需回复", "金融·账户告警", "法律·合同", "重要通知", "订阅·营销", "社交其他"]
 
 
@@ -18,7 +20,8 @@ def render_markdown(day: str, rows: list) -> tuple[str, int, int]:
         out.append(f"## {cat}({len(items)})")
         for m, a in sorted(items, key=lambda x: x[1].importance, reverse=True):
             out.append(f"- [{a.importance}] {a.one_line or m.subject} — {m.from_email}")
-            if a.summary:
-                out.append(f"  - {a.summary}")
+            detail = summary_plaintext(a.summary)
+            if detail:
+                out.append(f"  - {detail}")
         out.append("")
     return "\n".join(out), total, important

@@ -13,7 +13,7 @@ from app.auth import make_cookie, require_page, require_api, COOKIE_NAME, _valid
 from app.jobs import fetch_and_analyze, run_daily_digest
 from app import oauth
 
-from app.cleaner import clean_text, render_markdown
+from app.cleaner import clean_text, render_markdown, render_summary
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
@@ -23,6 +23,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 templates.env.filters["clean_text"] = clean_text
 templates.env.filters["markdown"] = render_markdown
+templates.env.filters["render_summary"] = render_summary
 
 CATEGORY_MAP = {
     "urgent": "紧急·需回复",
@@ -336,7 +337,7 @@ async def accounts_page(request: Request, msg: str = Query("")):
 
 def get_redirect_uri(request: Request) -> str:
     if settings.oauth_redirect_uri:
-        return settings.oauth_redirect_uri
+        return settings.oauth_redirect_uri.strip()
     scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
     return f"{scheme}://{request.url.netloc}/oauth/callback"
 

@@ -36,7 +36,7 @@ def get_auth_url(state: str, redirect_uri: str = "") -> str:
 
     The user's browser will be redirected here to grant gmail.readonly access.
     """
-    uri = redirect_uri or settings.oauth_redirect_uri
+    uri = (redirect_uri or settings.oauth_redirect_uri).strip()
     params = {
         "client_id": settings.google_client_id,
         "redirect_uri": uri,
@@ -63,7 +63,7 @@ async def exchange_code(code: str, redirect_uri: str = "") -> dict:
     Raises:
         ValueError: if the token exchange or Gmail API call fails.
     """
-    uri = redirect_uri or settings.oauth_redirect_uri
+    uri = (redirect_uri or settings.oauth_redirect_uri).strip()
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(GOOGLE_TOKEN_URL, data={
             "code": code,

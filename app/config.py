@@ -65,7 +65,7 @@ class Settings:
     body_max_chars: int = field(default_factory=lambda: int(os.environ.get("BODY_MAX_CHARS", "2000")))
     summary_threshold: int = field(default_factory=lambda: int(os.environ.get("IMPORTANCE_SUMMARY_THRESHOLD", "4")))
 
-    oauth_redirect_uri: str = field(default_factory=lambda: os.environ.get("OAUTH_REDIRECT_URI", ""))
+    oauth_redirect_uri: str = field(default_factory=lambda: (os.environ.get("OAUTH_REDIRECT_URI") or os.environ.get("OAUTH_REDIRECT_URL") or "").strip())
 
     whitelist_from: list[str] = field(default_factory=lambda: [
         s for s in os.environ.get("WHITELIST_FROM", "").split(",") if s

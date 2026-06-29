@@ -1,4 +1,5 @@
 import html
+import json
 import re
 from bs4 import BeautifulSoup
 from app.config import settings
@@ -120,5 +121,99 @@ def render_markdown(md_text: str | None) -> str:
     res = "\n".join(new_lines)
     res = re.sub(r'<p>\s*</p>', '', res)
     return res
+
+
+# ----------------------------------------------------------------------
+# Structured AI summary blocks (analyzer.py emits summary as a JSON array
+# of typed blocks; we render it to compact, escaped HTML here).
+# ----------------------------------------------------------------------
+
+def _parse_blocks(summary_text: str):
+    """Return a list of block dicts if summary_text is the new structured
+    JSON format, else None (legacy markdown / plain text)."""
+    text = (summary_text or "").strip()
+    if not text or text[0] not in "[{":
+        return None
+    try:
+        data = json.loads(text)
+    except (ValueError, TypeError):
+        return None
+    if isinstance(data, dict):
+        data = data.get("blocks") or data.get("summary")
+    return data if isinstance(data, list) else None
+
+
+def render_summary(summary_text: str | None) -> str:
+    """Render the AI summary. New structured blocks → clean HTML;
+    legacy markdown strings → existing markdown renderer."""
+    blocks = _parse_blocks(summary_text or "")
+    if blocks is None:
+        return render_markdown(summary_text)
+
+    parts: list[str] = []
+    for b in blocks:
+        if not isinstance(b, dict):
+            continue
+        btype = (b.get("type") or "text").lower()
+        title = html.escape(str(b.get("title") or "").strip())
+        title_html = f'<div class="sum-title">{title}</div>' if title else ""
+
+        if btype == "facts":
+            rows = []
+            for it in b.get("items") or []:
+                if not isinstance(it, dict):
+                    continue
+                k = html.escape(str(it.get("k", it.get("label", ""))).strip())
+                v = html.escape(str(it.get("v", it.get("value", ""))).strip())
+                if k or v:
+                    rows.append(
+                        f'<div class="sum-fact"><span class="sum-fact-k">{k}</span>'
+                        f'<span class="sum-fact-v">{v}</span></div>'
+                    )
+            if rows:
+                parts.append(f'<div class="sum-block">{title_html}<div class="sum-facts">{"".join(rows)}</div></div>')
+
+        elif btype == "list":
+            lis = "".join(
+                f"<li>{html.escape(str(i).strip())}</li>"
+                for i in (b.get("items") or []) if str(i).strip()
+            )
+            if lis:
+                parts.append(f'<div class="sum-block">{title_html}<ul class="sum-list">{lis}</ul></div>')
+
+        else:  # text
+            txt = html.escape(str(b.get("text") or "").strip())
+            if txt:
+                txt = txt.replace("\n", "<br>")
+                parts.append(f'<div class="sum-block">{title_html}<p class="sum-text">{txt}</p></div>')
+
+    return "".join(parts)
+
+
+def summary_plaintext(summary_text: str | None) -> str:
+    """Flatten the AI summary to a compact single-line plain text
+    (used by the Markdown daily digest). Legacy strings pass through."""
+    blocks = _parse_blocks(summary_text or "")
+    if blocks is None:
+        return (summary_text or "").replace("\n", " ").strip()
+
+    segments: list[str] = []
+    for b in blocks:
+        if not isinstance(b, dict):
+            continue
+        btype = (b.get("type") or "text").lower()
+        if btype == "facts":
+            kvs = [
+                f"{str(it.get('k', it.get('label',''))).strip()}: {str(it.get('v', it.get('value',''))).strip()}"
+                for it in (b.get("items") or []) if isinstance(it, dict)
+            ]
+            segments.extend(s for s in kvs if s.strip(": "))
+        elif btype == "list":
+            segments.extend(str(i).strip() for i in (b.get("items") or []) if str(i).strip())
+        else:
+            t = str(b.get("text") or "").replace("\n", " ").strip()
+            if t:
+                segments.append(t)
+    return "；".join(segments)
 
 

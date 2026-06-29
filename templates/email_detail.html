@@ -48,9 +48,8 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
       中文内容概要 (AI 翻译与梳理)
     </div>
-    <div class="summary-content markdown-body">
-      <textarea class="markdown-raw" style="display:none;">{{ a.summary }}</textarea>
-      <div class="markdown-target">{{ a.summary | markdown | safe }}</div>
+    <div class="summary-content sum-blocks">
+      {{ a.summary | render_summary | safe }}
     </div>
   </div>
   {% endif %}

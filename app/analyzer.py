@@ -2,38 +2,60 @@ import json
 import httpx
 from app.config import settings
 
-SYSTEM_PROMPT = """你是专业的邮件智能分析、翻译与排版助手。请阅读邮件正文，将其核心内容翻译并精炼为中文概要，仅返回如下 JSON，不要包含任何其它文字:
+SYSTEM_PROMPT = """你是专业的邮件智能分析、翻译与结构化排版助手。请阅读邮件正文，将其核心内容翻译为中文并结构化，严格只返回如下 JSON（不要输出任何额外文字，也不要用 ```json 代码块包裹）:
 {
   "category": "紧急·需回复 | 金融·账户告警 | 法律·合同 | 重要通知 | 订阅·营销 | 社交其他",
   "importance": 1,
-  "one_line": "一句话核心概述(中文)",
-  "summary": "排版优良的邮件内容完整中文概要(请参照下方排版规则)"
+  "one_line": "一句话核心概述(中文, 不超过50字, 不含换行)",
+  "summary": [
+    {"type": "facts", "title": "关键信息", "items": [{"k": "金额", "v": "$100.00"}, {"k": "截止日期", "v": "2026-07-01"}]},
+    {"type": "list", "title": "活动商品", "items": ["商品 A 五折", "商品 B 买一送一"]},
+    {"type": "text", "title": "说明", "text": "一段精炼的说明文字。"}
+  ]
 }
 
 分类口径:
-- 紧急·需回复:个人/工作直发,含截止日期或明确问句
-- 金融·账户告警:券商/银行/保证金/对账单等账户相关
-- 法律·合同:律所/法院/合同/传票/仲裁
-- 重要通知:学校/政府/账户安全/验证码
-- 订阅·营销:营销推广(通常已被预过滤)
-- 社交其他:其余
+- 紧急·需回复: 个人/工作直发, 含截止日期或明确问句
+- 金融·账户告警: 券商/银行/保证金/对账单等账户相关
+- 法律·合同: 律所/法院/合同/传票/仲裁
+- 重要通知: 学校/政府/账户安全/验证码
+- 订阅·营销: 营销推广(通常已被预过滤)
+- 社交其他: 其余
 importance 为 1-5 的整数。
 
-【排版规则 —— 必须严格遵守】
-你在生成 summary 时，必须对原文进行智能排版重构，遵守以下规则:
+【summary 结构化规则 —— 必须严格遵守】
+summary 是一个"内容块"数组。每个块为以下三种类型之一:
+- facts: 关键数据键值对。把金额/日期/截止时间/折扣力度/账号/订单号/验证码等关键信息抽取为 items, 每项为 {"k": "标签", "v": "值"}。标签简短(2-6字), 值保留原始数字与单位。
+- list: 并列要点/商品/操作步骤。items 为字符串数组, 每条一句话, 紧凑、不换行、不加序号符号(渲染端会自动加)。
+- text: 无法结构化的说明性段落。text 为一段精炼文字, 段内不要堆叠多余换行。
 
-1. 段落精简：将原文中大量冗余的连续空行、无意义换行全部去除。只在语义分段处保留一个换行。同一段内容不应被多次换行打断。
-2. 逻辑分组：将相关内容聚合为逻辑段落。例如: 优惠信息归为一段、操作步骤归为一段、注意事项归为一段。段与段之间用一个空行分隔。
-3. 列表化：当原文含有多条并列的信息(如商品列表、步骤说明、多个要点)时，使用简洁的序号列表(1. 2. 3.)或短横线列表(- )呈现，每条一行，紧凑排列。
-4. 关键数据前置：金额、日期、截止时间、折扣力度等关键数据应放在显眼位置，不要埋在大段文字中。
-5. 去装饰化：原文中纯粹用于视觉装饰的符号行(如 ═══、───、***、=====、☆☆☆ 等分隔线)一律去除，不要保留。
-6. 保留语义：排版优化不得改变原文的任何核心语义和信息完整性。翻译须准确忠实。
-7. 广告/营销邮件：若邮件为广告或营销推广，请务必将其中的图片海报/Banner文案/促销折扣等文本一并准确中译，清晰列出活动商品、优惠力度、截止时间或行动按钮等核心广告信息。
-8. 最终输出的 summary 应是一段排版精炼、段落清晰、阅读体验极佳的中文概要文本。"""
-
+排版与翻译要求:
+1. 全部翻译为中文, 准确忠实, 不遗漏核心信息, 不臆造原文没有的内容。
+2. 去除原文冗余空行、无意义换行, 以及纯装饰符号行(如 ═══ ─── *** ===== ☆☆☆ 等), 不要保留。
+3. 关键数据优先用 facts 块前置; 多条并列信息用 list 块; 其余用 text 块。
+4. 块的数量保持精简(通常 1-4 个), 不要为单条信息硬拆成多块, 也不要输出空块或空字段。
+5. 每个块的 title 简短, 可省略(留空字符串)。整体应紧凑、清晰、阅读体验极佳。
+6. 若为广告/营销邮件, 需将海报/Banner/促销文案一并中译, 用 facts(优惠力度/截止时间) + list(活动商品/行动按钮) 清晰呈现。
+7. 若邮件内容极简(如纯验证码、单条通知), summary 可只含一个 facts 或 text 块。"""
 
 
 _DEFAULT = {"category": "社交其他", "importance": 1, "one_line": "", "summary": ""}
+
+
+def _coerce_importance(value) -> int:
+    """Coerce the model's importance into an int clamped to 1-5."""
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        n = 1
+    return max(1, min(5, n))
+
+
+def _coerce_summary(value) -> str:
+    """Store structured block arrays as a JSON string; pass plain strings through."""
+    if isinstance(value, (list, dict)):
+        return json.dumps(value, ensure_ascii=False)
+    return str(value or "")
 
 
 async def analyze(msg: dict) -> dict:
@@ -49,7 +71,7 @@ async def analyze(msg: dict) -> dict:
             {"role": "user", "content": user},
         ],
         "temperature": 0.2,
-        "max_tokens": 800,
+        "max_tokens": 1200,
         "response_format": {"type": "json_object"},
     }
     headers = {"Authorization": f"Bearer {settings.llm_api_key}"}
@@ -59,10 +81,13 @@ async def analyze(msg: dict) -> dict:
             r.raise_for_status()
             content = r.json()["choices"][0]["message"]["content"]
         data = json.loads(_unwrap(content))
-        out = {**_DEFAULT, **{k: data.get(k, _DEFAULT[k]) for k in _DEFAULT}}
-        out["importance"] = int(out["importance"])
-        out["model_used"] = settings.llm_model
-        return out
+        return {
+            "category": str(data.get("category") or _DEFAULT["category"]),
+            "importance": _coerce_importance(data.get("importance")),
+            "one_line": str(data.get("one_line") or "").strip(),
+            "summary": _coerce_summary(data.get("summary")),
+            "model_used": settings.llm_model,
+        }
     except Exception as e:
         d = dict(_DEFAULT)
         d["one_line"] = (msg.get("subject") or "")[:120]

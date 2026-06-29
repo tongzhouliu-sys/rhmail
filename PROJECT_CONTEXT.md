@@ -240,8 +240,11 @@ sequenceDiagram
 * **入口**：`app/analyzer.py` 的 `analyze()`。
 * **核心流程**：发送包含系统 Prompt 的 Prompt 结构，开启 `response_format: {"type": "json_object"}` 和 `temperature: 0.2`。
 * **分析分类**：固定为 6 种分类（`紧急·需回复`、`金融·账户告警`、`法律·合同`、`重要通知`、`订阅·营销`、`社交其他`）。
-* **分析评分**：`importance` 整数 1-5。仅当 `importance >= 4` 时生成 `summary` 要点。
-* **异常处理**：若 LLM 调用超时、网络报错或 JSON 解析失败，回退生成默认结构，`one_line` 截取主题前120字，`summary` 标记 `(分析失败:错误原因)`，保障任务不中断。
+* **分析评分**：`importance` 整数 1-5（解析时统一夹取到 1-5 区间）。
+* **结构化 summary（重要）**：`summary` 不再是自由 Markdown 文本，而是 LLM 按既定规则输出的「内容块数组」JSON（`facts` 键值对 / `list` 并列要点 / `text` 段落），由 `analyzer.py` 序列化为 JSON 字符串存入 `analysis_results.summary`。规则要求中译、去除冗余空白与装饰符号、关键数据前置。
+  * **渲染**：Web 详情页由服务端 `cleaner.render_summary()`（注册为 Jinja `render_summary` 过滤器）将块数组渲染为紧凑、转义安全的 HTML（`.sum-blocks` 样式），不再走客户端 marked.js 二次渲染；`cleaner.summary_plaintext()` 将块数组压平为单行紧凑文本供每日 Markdown 日报使用。
+  * **向后兼容**：对历史的旧 Markdown 文本 `summary`，`render_summary()` 自动回退到 `render_markdown()`。
+* **异常处理**：若 LLM 调用超时、网络报错或 JSON 解析失败，回退生成默认结构，`one_line` 截取主题前120字，`summary` 标记 `(分析失败:错误原因)`（按普通文本渲染），保障任务不中断。
 
 ### 4.5 功能五：每日邮件日报自动生成 (CLI 独立执行)
 * **作用**：对每日收到的邮件进行结构化汇总，按重要度生成 Markdown 报告。
@@ -265,7 +268,7 @@ sequenceDiagram
 | `app/gmail.py` | Gmail API 交互与增量数据抓取 | `refresh_token`, `last_history_id` | 原始邮件字典列表、`new_history_id` | `build_service()`, `fetch_new()`, `list_added_ids_via_history()` | ⚠️ **高**。含 History API 报错 404 回退机制及 Base64URL 解码。 |
 | `app/prefilter.py` | 规则过滤 | 邮件字典 | `bool` (是否过滤) | `should_filter_out()` | 🟢 **中**。注意黑白名单与正则的匹配优先级。 |
 | `app/cleaner.py` | 文本清洗与截断 | 原始 text / html | 清洗后的纯文本 | `clean_body()`, `_html_to_text()`, `_strip_quotes()` | 🟢 **中**。注意截断边界。 |
-| `app/analyzer.py` | LLM 交互与 JSON 了解 | 邮件三要素字典 | 分析结果字典 | `analyze()`, `_unwrap()` | ⚠️ **高**。System Prompt 与 JSON 解析强绑定。 |
+| `app/analyzer.py` | LLM 交互与结构化 JSON 解析 | 邮件三要素字典 | 分析结果字典（`summary` 为内容块数组 JSON 串） | `analyze()`, `_coerce_summary()`, `_coerce_importance()`, `_unwrap()` | ⚠️ **高**。System Prompt 与 `summary` 块结构强绑定；改块结构需同步 `cleaner.render_summary()`。 |
 | `app/digest.py` | 邮件日报渲染 | 日期字符串、(Message, Analysis) 列表 | (Markdown字符串, total, important) | `render_markdown()` | 🟢 **低**。主要控制 Markdown 输出排版。 |
 | `app/jobs.py` | 业务管道编排与 CLI 入口 | CLI 参数 (`fetch` / `digest`) | 无 | `fetch_and_analyze()`, `run_daily_digest()`, `if __name__ == '__main__'` | ⚠️ **高**。属于解耦后的单独 CLI 执行入口与数据库事务核心。 |
 | `app/auth.py` | Cookie 校验依赖 | Cookie `session` | `HTTPException` 或放行 | `require_page()`, `require_api()`, `make_cookie()` | ⚠️ **高**。路由鉴权核心，安全敏感。 |
@@ -362,7 +365,7 @@ erDiagram
 * **`category`**: `String(32)`, 默认 `"社交其他"`, 邮件分类（带有索引 `ix_category`）。
 * **`importance`**: `Integer`, 默认 `1`, 重要度 1-5（带有索引 `ix_importance`）。
 * **`one_line`**: `Text`, 一句话概述。
-* **`summary`**: `Text`, 重点要点摘要。
+* **`summary`**: `Text`, AI 摘要。新格式为「内容块数组」的 JSON 字符串（`facts`/`list`/`text`），由 `cleaner.render_summary()` 渲染；旧数据为 Markdown 文本，自动回退渲染。
 * **`model_used`**: `String(64)`, 实际调用的 LLM 模型名称（如 `gpt-4o-mini`）。
 
 #### 4. `daily_digests` (每日汇总日报表)
