@@ -1,42 +1,104 @@
 {% extends "base.html" %}
-{% block title %}概览 — 邮件分析{% endblock %}
+{% block title %}概览 — RHMail AI 智能看板{% endblock %}
 {% block body %}
-<h1 class="page-title">概览</h1>
+
+<div class="dashboard-hero">
+  <div class="hero-text">
+    <h1>智能邮件分析看板</h1>
+    <p>AI 实时洞察邮件重要度、自动提炼要点与每日总结摘要</p>
+  </div>
+  <div class="hero-status">
+    <span class="pulse-dot"></span>
+    引擎已就绪
+  </div>
+</div>
 
 <div class="stat-grid">
   <div class="stat-card">
+    <div class="stat-card-header">
+      <div class="stat-label">已分析邮件</div>
+      <div class="stat-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+      </div>
+    </div>
     <div class="stat-value">{{ total }}</div>
-    <div class="stat-label">已分析邮件</div>
   </div>
+
   <div class="stat-card highlight">
-    <div class="stat-value">{{ important }}</div>
-    <div class="stat-label">需关注 (重要度 ≥4)</div>
+    <div class="stat-card-header">
+      <div class="stat-label">重点关注 (重要度 ≥4)</div>
+      <div class="stat-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      </div>
+    </div>
+    <div class="stat-value" style="color: var(--imp4);">{{ important }}</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-card-header">
+      <div class="stat-label">分类覆盖</div>
+      <div class="stat-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+      </div>
+    </div>
+    <div class="stat-value" style="color: var(--primary);">{{ categories|length }}</div>
   </div>
 </div>
 
 <h2>按分类统计</h2>
 <div class="cat-grid">
   {% for cat in categories %}
+  {% set count = by_cat.get(cat, 0) %}
+  {% set pct = (count / total * 100) if total > 0 else 0 %}
   <div class="cat-card">
-    <div class="cat-name">{{ cat }}</div>
-    <div class="cat-count">{{ by_cat.get(cat, 0) }}</div>
+    <div class="cat-name">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>
+      {{ cat }}
+    </div>
+    <div class="cat-count">{{ count }}</div>
+    <div class="cat-progress">
+      <div class="cat-bar" style="width: {{ pct }}%;"></div>
+    </div>
   </div>
   {% endfor %}
 </div>
 
-<h2>最近日报</h2>
+<div class="section-header">
+  <h2>最近日报</h2>
+</div>
+
 {% if digests %}
 <ul class="digest-list">
   {% for d in digests %}
   <li>
     <a href="/digests/{{ d.date }}">
-      <span class="digest-date">{{ d.date }}</span>
-      <span class="digest-meta">共 {{ d.total_emails }} 封,需关注 {{ d.important_emails }} 封</span>
+      <div style="display:flex; align-items:center; gap:1rem;">
+        <div class="digest-icon-box">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        </div>
+        <div>
+          <div class="digest-date">{{ d.date }} AI 总结分析日报</div>
+          <div class="digest-meta">处理邮件共 {{ d.total_emails }} 封</div>
+        </div>
+      </div>
+      <div>
+        {% if d.important_emails %}
+        <span class="highlight-badge">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          {{ d.important_emails }} 封需关注
+        </span>
+        {% else %}
+        <span class="cat-badge" style="background:rgba(16,185,129,0.1); color:#34d399; border-color:rgba(16,185,129,0.2);">全为常规邮件</span>
+        {% endif %}
+      </div>
     </a>
   </li>
   {% endfor %}
 </ul>
 {% else %}
-<p class="muted">暂无日报。每天 {{ "08:00" }} 自动生成。</p>
+<div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:2rem; text-align:center;">
+  <p class="muted">暂无日报生成记录。系统每天会自动为您聚合生成重要邮件汇总报告。</p>
+</div>
 {% endif %}
+
 {% endblock %}

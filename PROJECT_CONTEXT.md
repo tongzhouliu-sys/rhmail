@@ -1,0 +1,560 @@
+# PROJECT_CONTEXT.md — Gmail AI 邮件分析系统 (AI 开发入口与系统上下文)
+
+> ⚠️ **所有 AI 助手（Claude Code、Cursor、ChatGPT、Antigravity 等）必读指南**：
+> 在修改、新增或重构本项目任何代码之前，必须先完整阅读并理解本文档。文档内容完全来源于仓库内真实代码实现（基于 `app/`、`scripts/`、`templates/`、`static/` 等目录），禁止凭空编造设计。若代码实现与历史设计文档存在冲突，一律以代码真实实现为准。
+
+---
+
+## 目录
+1. [项目定位 (Project Positioning)](#1-项目定位-project-positioning)
+2. [系统架构与数据流 (System Architecture)](#2-系统架构与数据流-system-architecture)
+3. [系统目录说明 (Directory Structure)](#3-系统目录说明-directory-structure)
+4. [业务能力说明 (Business Capabilities)](#4-业务能力说明-business-capabilities)
+5. [核心模块说明 (Core Modules)](#5-核心模块说明-core-modules)
+6. [数据库设计说明 (Database Design)](#6-数据库设计说明-database-design)
+7. [API 接口文档 (API Documentation)](#7-api-接口文档-api-documentation)
+8. [配置项说明 (Configuration)](#8-配置项说明-configuration)
+9. [定时任务与后台 Job (Scheduled Tasks)](#9-定时任务与后台-job-scheduled-tasks)
+10. [Web 页面说明 (Web UI & Pages)](#10-web-页面说明-web-ui--pages)
+11. [代码规范与部署 (Coding Standards & Deployment)](#11-代码规范与部署-coding-standards--deployment)
+12. [技术债与已知风险 (Technical Debt & Risks)](#12-技术债与已知风险-technical-debt--risks)
+13. [文件与目录清理建议 (Deletion Recommendations)](#13-文件与目录清理建议-deletion-recommendations)
+14. [AI 开发规范 (AI Development Rules)](#14-ai-开发规范-ai-development-rules)
+
+---
+
+## 1. 项目定位 (Project Positioning)
+
+### 1.1 项目是做什么的？
+**Gmail AI 邮件分析系统**（内部项目名 `rhmail`）是一个轻量级、自建单用户的个人 AI 邮件助手。系统通过后台定时任务自动连接多个 Gmail 邮箱，增量同步新邮件，经过规则预过滤、HTML/正文清洗后，调用 OpenAI 兼容的 LLM 模型对邮件进行智能分类与重要度分级（1-5级），提取一句话总结与关键要点，并自动生成每日 Markdown 邮件日报，同时提供轻量级 Web 看板供用户浏览、筛选和查阅。
+
+### 1.2 主要解决什么问题？
+* **邮件信息过载**：个人每日接收大量营销邮件、系统通知与订阅内容，核心重要邮件容易被淹没。
+* **多邮箱管理成本高**：需要频繁切换不同 Gmail 账号查看新邮件。
+* **隐私与自主可控**：不依赖第三方 SaaS 平台，基于 Gmail 官方 OAuth 2.0 只读权限与自行指定的 LLM 网关/模型（如 DeepSeek、GPT-4o-mini），数据完全存储在本地或自建数据库中。
+
+### 1.3 核心能力
+1. **多 Gmail 账号 OAuth 增量同步**：支持动态配置任意数量的 Gmail 账号，基于 Gmail History API 实现低延迟增量同步，配有历史断续时的 Timestamp 回溯补齐机制。
+2. **两阶段降本规则过滤与清洗**：通过黑白名单、退订 Header (`List-Unsubscribe`)、营销正则进行粗筛丢弃；对留存邮件自动解析 HTML/Plain Text，剔除引用回复与签名，并按设定字符数（默认 2000 字）截断。
+3. **LLM 结构化分析**：严格输出 JSON 结构，提取 6 大精准分类、1-5 级重要度分级、一句话概要及重点邮件（重要度 $\ge 4$）要点摘要。
+4. **自动化每日总结（Daily Digest）**：每日定时汇总当日所有解析邮件，按分类与重要度倒序生成格式化的 Markdown 日报。
+5. **安全 Web 管理看板**：内置 基于 Cookie 签名的轻量级密码认证，提供概览统计、多维度邮件筛选列表、邮件详情查看以及历史日报归档浏览。
+
+### 1.4 非目标 (Non-Goals)
+* ❌ **非多租户 SaaS 系统**：不提供用户注册、多租户隔离、权限分配及计费功能。
+* ❌ **不支持邮件发送与回复**：仅申请 `gmail.readonly` 只读权限，绝不提供写邮件、发邮件或自动回复功能。
+* ❌ **不内置客户端或 APP**：仅提供基于 Jinja2 模板的响应式 Web 页面，不做 Native APP 或客户端插件。
+* ❌ **不做复杂的模型路由与成本统计**：直接调用配置的统一 OpenAI 兼容端点，不集成 LiteLLM、LangChain 等重型框架，不做 Token 消耗与成本分析。
+
+---
+
+## 2. 系统架构与数据流 (System Architecture)
+
+系统基于 Python 3.11 + FastAPI 架构构建，数据库采用 SQLAlchemy 2.0 ORM（兼容 SQLite 与 PostgreSQL），后台任务由 APScheduler（AsyncIOScheduler）在 FastAPI 进程内调度执行。
+
+### 2.1 系统总体架构图 (Mermaid)
+
+```mermaid
+graph TD
+    subgraph 外部服务 (External Services)
+        GCP[Google Gmail API]
+        LLM[OpenAI 兼容 LLM 网关]
+    end
+
+    subgraph rhmail 系统 (FastAPI 进程)
+        AP[FastAPI Web Engine]
+        AUTH[Auth 认证模块 (itsdangerous)]
+        SCHED[APScheduler 定时调度器]
+        JOB[Job 任务执行引擎]
+        
+        subgraph 核心处理管道 (Processing Pipeline)
+            GMAIL[Gmail 模块]
+            FILTER[Prefilter 预过滤]
+            CLEAN[Cleaner 正文清洗]
+            ANALYZER[Analyzer AI 分析]
+            DIGEST[Digest 日报生成]
+        end
+        
+        ORM[SQLAlchemy ORM (db.py / models.py)]
+    end
+
+    subgraph 存储 (Storage)
+        DB[(SQLite / PostgreSQL)]
+    end
+
+    subgraph 用户交互 (Client)
+        BROWSER[浏览器 Web 看板]
+    end
+
+    %% 数据与调用关系
+    SCHED -->|每5分钟触发| JOB
+    SCHED -->|每天8点触发| JOB
+    JOB --> GMAIL
+    GMAIL -->|OAuth 2.0| GCP
+    GMAIL -->|原始邮件| JOB
+    JOB --> FILTER
+    JOB --> CLEAN
+    JOB --> ANALYZER
+    ANALYZER -->|HTTP Async| LLM
+    JOB --> DIGEST
+    
+    JOB --> ORM
+    AP --> ORM
+    ORM --> DB
+
+    BROWSER -->|HTTP / Cookie| AP
+    AP --> AUTH
+```
+
+### 2.2 数据流动与处理链路图
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Sched as APScheduler
+    participant Job as jobs.fetch_and_analyze
+    participant G as gmail.py
+    participant F as prefilter.py
+    participant C as cleaner.py
+    participant A as analyzer.py
+    participant DB as Database (SQLAlchemy)
+
+    Sched->>Job: 触发 fetch_and_analyze()
+    Job->>DB: 读取 active 且无需重新授权的 GmailAccount
+    loop 遍历各 Gmail 账号
+        Job->>G: build_service(refresh_token) & fetch_new(last_history_id)
+        G-->>Job: 返回增量邮件列表及 new_history_id
+        loop 遍历每封邮件
+            Job->>DB: 检查 (account_id, message_id) 是否已存在
+            alt 已存在
+                Job-->>Job: 跳过处理
+            else 新邮件
+                Job->>F: should_filter_out(msg)
+                F-->>Job: 返回 bool (filtered)
+                Job->>C: clean_body(text, html)
+                C-->>Job: 返回清洗截断后的正文
+                Job->>DB: 写入 GmailMessage (保存基本信息与 is_filtered)
+                alt filtered == False (未被粗筛过滤)
+                    Job->>A: analyze(from, subject, body_text)
+                    A-->>Job: 返回 AI 分析结果 (JSON)
+                    Job->>DB: 写入 AnalysisResult
+                end
+            end
+        end
+        Job->>DB: 更新 GmailAccount.last_history_id
+    end
+```
+
+---
+
+## 3. 系统目录说明 (Directory Structure)
+
+```
+/Users/tyrone/Desktop/code/rhmail/
+├── Dockerfile                      # [核心] Docker 容器镜像构建脚本 (Python 3.11-slim)
+├── Gmail-AI-Email-Analysis-Tech-Spec.md # [历史/参考] 详细技术规格说明文档
+├── gmail-ai-技术开发方案.md          # [历史/参考] 原始技术开发方案文档
+├── gmail-ai-邮件分析系统-精简版.md    # [历史/参考] 产品与技术框架精简版文档
+├── railway.toml                    # [核心] Railway 云平台部署配置文件
+├── requirements.txt                # [核心] Python 依赖包及其精确版本定义
+├── .env.example                    # [核心] 环境变量模版文件
+├── app/                            # [核心] 业务代码主目录
+│   ├── __init__.py                 # 包初始化文件
+│   ├── config.py                   # [核心] 全局配置加载模块 (读取环境变量)
+│   ├── db.py                       # [核心] 数据库 Engine 与 Session 初始化
+│   ├── models.py                   # [核心] SQLAlchemy ORM 数据模型定义
+│   ├── auth.py                     # [核心] Session Cookie 签验与路由鉴权依赖
+│   ├── gmail.py                    # [核心] Google OAuth 认证与 Gmail API 数据拉取
+│   ├── prefilter.py                # [核心] 规则预过滤模块 (黑白名单/退订/主题正则)
+│   ├── cleaner.py                  # [核心] HTML 转文本、引用/签名剥离与正文截断
+│   ├── analyzer.py                 # [核心] LLM API 调用与 JSON 格式解析
+│   ├── digest.py                   # [核心] Markdown 邮件日报渲染引擎
+│   ├── jobs.py                     # [核心] 定时任务逻辑编排 (拉取/分析/日报生成)
+│   ├── scheduler.py                # [核心] APScheduler 调度器启动与定时配置
+│   └── main.py                     # [核心] FastAPI 应用入口、路由与 HTML 模板渲染
+├── scripts/                        # [辅助/工具] 运维与辅助脚本
+│   ├── __init__.py                 # 包初始化文件
+│   └── authorize.py                # [核心工具] 首次获取 Gmail OAuth Refresh Token 的 CLI 工具
+├── static/                         # [核心] Web 静态资源目录
+│   └── style.css                   # 全站 CSS 样式表 (暗黑主题、卡片、响应式)
+└── templates/                      # [核心] Jinja2 HTML 页面模板
+    ├── base.html                   # 基础布局模板 (TopBar、Nav)
+    ├── login.html                  # 看板登录页面
+    ├── dashboard.html              # 概览看板主页 (统计指标、分类分布、最近日报)
+    ├── emails.html                 # 邮件列表页 (多维度筛选、分页)
+    ├── email_detail.html           # 邮件详情页 (显示 AI 分析卡片与正文)
+    ├── digests.html                # 历史日报归档列表页
+    └── digest_detail.html          # 日报详情页 (渲染 Markdown 预格式文本)
+```
+
+### 目录组件评估分类：
+* **核心目录/文件（不可删除）**：`app/`, `static/`, `templates/`, `scripts/authorize.py`, `Dockerfile`, `railway.toml`, `requirements.txt`, `.env.example`。
+* **参考文档（可暂留或统一归档）**：`Gmail-AI-Email-Analysis-Tech-Spec.md`, `gmail-ai-技术开发方案.md`, `gmail-ai-邮件分析系统-精简版.md` 属于项目早期设计文档，现已提炼并收录至本 `PROJECT_CONTEXT.md` 中。
+
+---
+
+## 4. 业务能力说明 (Business Capabilities)
+
+### 4.1 功能一：Gmail 账号授权与 Refresh Token 获取
+* **作用**：引导用户在本地通过 OAuth 2.0 桌面端流程登录 Google 账号，获取具有 `gmail.readonly` 权限的持久化 `refresh_token`。
+* **入口**：运行 CLI 脚本 `python scripts/authorize.py`。
+* **核心流程**：依赖项目根目录下的 `client_secret.json`，启动本地 8765 端口 Web 服务，拉起浏览器授权；用户同意后获取 Credentials 并打印 `GMAIL_EMAIL_N` 与 `GMAIL_REFRESH_TOKEN_N`。
+* **依赖配置**：`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`。
+* **风险点**：若在 GCP Console 中未将 OAuth 应用发布为 **Production** 状态，获取的 Refresh Token 将在 7 天后强制失效，引发 `google.auth.exceptions.RefreshError`。
+
+### 4.2 功能二：定时增量邮件拉取与同步
+* **作用**：定时拉取已激活 Gmail 账号的最新邮件。
+* **入口**：`app/jobs.py` 中的 `fetch_and_analyze()`。
+* **核心流程**：
+  1. 校验环境变量与 DB 中的账号同步状态 (`_sync_accounts_from_config`)。
+  2. 若账号存有 `last_history_id`，优先调用 Gmail History API (`list_added_ids_via_history`) 进行毫秒级增量拉取。
+  3. 若 History API 返回 404 (History ID 过期失效) 或首次运行（`last_history_id` 为空），自动回退至 Timestamp 回溯机制 (`list_message_ids_since`)，按 `BACKFILL_DAYS`（默认2天）拉取。
+  4. 解析邮件 Header（发件人、主题、日期、List-Unsubscribe）与 MIME Body。
+* **涉及数据**：更新 `gmail_accounts` 表中的 `last_history_id`，若遇到 `RefreshError` 则标记 `needs_reauth = True`。
+
+### 4.3 功能三：邮件规则预过滤 (Prefilter) 与正文清洗
+* **作用**：以极低成本过滤高频营销垃圾邮件，并提取纯净的邮件正文。
+* **入口**：`app/prefilter.py` 的 `should_filter_out()`，`app/cleaner.py` 的 `clean_body()`。
+* **匹配规则**（优先级自上而下）：
+  1. 白名单命中 (`WHITELIST_FROM`) ➔ 绝对保留 (`False`)。
+  2. 黑名单命中 (`BLACKLIST_FROM`) ➔ 过滤丢弃 (`True`)。
+  3. 含有 `List-Unsubscribe` 响应头 ➔ 过滤丢弃 (`True`)。
+  4. 主题匹配正则 `(unsubscribe|newsletter|促销|优惠|限时|退订)` ➔ 过滤丢弃 (`True`)。
+* **清洗逻辑**：若无 Plain Text，使用 BeautifulSoup 解析 HTML 并剥离 `<script>` 与 `<style>`；利用行匹配剔除 `>` 引用回复；剥离常见签名分隔符（如 `\n-- \n`, `\nSent from `）；最终按 `BODY_MAX_CHARS`（默认2000字）截断并附加 `…(截断)` 标识。
+
+### 4.4 功能四：AI 智能分级与摘要分析
+* **作用**：调用 LLM 对未被过滤的邮件进行分类、评分与总结。
+* **入口**：`app/analyzer.py` 的 `analyze()`。
+* **核心流程**：发送包含系统 Prompt 的 Prompt 结构，开启 `response_format: {"type": "json_object"}` 和 `temperature: 0.2`。
+* **分析分类**：固定为 6 种分类（`紧急·需回复`、`金融·账户告警`、`法律·合同`、`重要通知`、`订阅·营销`、`社交其他`）。
+* **分析评分**：`importance` 整数 1-5。仅当 `importance >= 4` 时生成 `summary` 要点。
+* **异常处理**：若 LLM 调用超时、网络报错或 JSON 解析失败，回退生成默认结构，`one_line` 截取主题前120字，`summary` 标记 `(分析失败:错误原因)`，保障任务不中断。
+
+### 4.5 功能五：每日邮件日报自动生成 (Daily Digest)
+* **作用**：对每日收到的邮件进行结构化汇总，按重要度生成 Markdown 报告。
+* **入口**：`app/jobs.py` 的 `run_daily_digest()` 与 `app/digest.py` 的 `render_markdown()`。
+* **核心流程**：扫描当前 ISO 日期（`YYYY-MM-DD`）下所有已存库的邮件与分析结果，统计总数与重要邮件数（`importance >= 4`），按照固定分类顺序分组并按重要度降序排列，渲染生成 Markdown 格式文本，写入/覆盖 `daily_digests` 表。
+
+### 4.6 功能六：Web 看板与安全认证
+* **作用**：提供安全可视化的 Web 管理界面。
+* **入口**：`app/main.py` 及 `templates/`。
+* **核心流程**：访问受保护页面重定向至 `/login`；提交密码通过后生成经 `itsdangerous` 加密签名的 `session` Cookie（默认有效期7天）；主页展示总计指标与分类柱状图，邮件页支持按分类、重要度、日期范围组合筛选及分页查看。
+
+---
+
+## 5. 核心模块说明 (Core Modules)
+
+| 模块文件 | 核心职责 | 输入 | 输出 | 关键类 / 函数 | 盲目修改风险 |
+|---|---|---|---|---|---|
+| `app/config.py` | 环境变量读取与全局单例 `settings` 构建 | 环境变量 (`os.environ`) | `Settings` dataclass 实例 | `Settings`, `_accounts_from_env()` | ⚠️ **高**。包含多账号解析逻辑，修改可能导致配置无法加载或字段丢失。 |
+| `app/db.py` | 数据库 Engine 与 Session 管理 | `settings.database_url` | SQLAlchemy `engine`, `SessionLocal`, `init_db()` | `init_db()`, `SessionLocal` | ⚠️ **高**。SQLite 驱动包含 `check_same_thread: False` 配置，改动可能导致多线程死锁或连接池泄露。 |
+| `app/models.py` | 声明式 ORM 实体映射 | 无 | ORM Model 类 | `GmailAccount`, `GmailMessage`, `AnalysisResult`, `DailyDigest` | ⚠️ **极高**。改动直接影响数据库表结构及外键关联。 |
+| `app/gmail.py` | Gmail API 交互与增量数据抓取 | `refresh_token`, `last_history_id` | 原始邮件字典列表、`new_history_id` | `build_service()`, `fetch_new()`, `list_added_ids_via_history()` | ⚠️ **高**。含 History API 报错 404 回退机制及 Base64URL 解码，逻辑较复杂。 |
+| `app/prefilter.py` | 规则过滤 | 邮件字典 | `bool` (是否过滤) | `should_filter_out()` | 🟢 **中**。可按需调整规则，但需注意黑白名单与正则的匹配优先级。 |
+| `app/cleaner.py` | 文本清洗与截断 | 原始 text / html | 清洗后的纯文本 | `clean_body()`, `_html_to_text()`, `_strip_quotes()` | 🟢 **中**。注意 BeautifulSoup 缺失标签的处理与截断边界。 |
+| `app/analyzer.py` | LLM 交互与 JSON 了解 | 邮件三要素字典 | 分析结果字典 | `analyze()`, `_unwrap()` | ⚠️ **高**。System Prompt 与 JSON 解析强绑定，修改 Prompt 需同步确认字段解析逻辑。 |
+| `app/digest.py` | 邮件日报渲染 | 日期字符串、(Message, Analysis) 列表 | (Markdown字符串, total, important) | `render_markdown()` | 🟢 **低**。主要控制 Markdown 输出排版与分类排序。 |
+| `app/jobs.py` | 后台业务管道编排 | 无 | 无 | `fetch_and_analyze()`, `run_daily_digest()` | ⚠️ **高**。负责事务 commit/rollback 逻辑与状态更新，属于业务核心枢纽。 |
+| `app/scheduler.py` | APScheduler 容器管理 | `settings` 参数 | `scheduler` 单例 | `start_scheduler()` | 🟢 **中**。控制任务执行周期与并发 coalesce。 |
+| `app/auth.py` | Cookie 校验依赖 | Cookie `session` | `HTTPException` 或放行 | `require_page()`, `require_api()`, `make_cookie()` | ⚠️ **高**。路由鉴权核心，安全敏感。 |
+| `app/main.py` | FastAPI 路由入口 | HTTP Request | HTMLResponse / JSONResponse | `dashboard()`, `emails_page()`, `login_submit()` | 🟢 **中**。Web 端点集散地。 |
+
+---
+
+## 6. 数据库设计说明 (Database Design)
+
+系统使用 SQLAlchemy 2.0 ORM 定义了 4 张核心数据表：
+
+```mermaid
+erDiagram
+    gmail_accounts ||--o{ gmail_messages : "owns"
+    gmail_messages ||--o| analysis_results : "has"
+    gmail_accounts ||--o{ daily_digests : "has"
+
+    gmail_accounts {
+        int id PK
+        string email UK
+        text refresh_token
+        string last_history_id
+        boolean is_active
+        boolean needs_reauth
+        datetime created_at
+        datetime updated_at
+    }
+
+    gmail_messages {
+        int id PK
+        int account_id FK
+        string message_id
+        string from_email
+        string from_name
+        text subject
+        text body_text
+        datetime received_at
+        boolean is_filtered
+        datetime created_at
+    }
+
+    analysis_results {
+        int id PK
+        int message_pk FK,UK
+        string category
+        int importance
+        text one_line
+        text summary
+        string model_used
+        datetime created_at
+    }
+
+    daily_digests {
+        int id PK
+        string date
+        int account_id FK
+        int total_emails
+        int important_emails
+        text content_md
+        datetime created_at
+    }
+```
+
+### 6.1 数据表详细规范
+
+#### 1. `gmail_accounts` (Gmail 账号表)
+* **`id`**: `Integer`, 主键, 自增。
+* **`email`**: `String(255)`, 唯一约束 (`unique=True`), 邮箱地址。
+* **`refresh_token`**: `Text`, OAuth 2.0 刷新令牌。
+* **`last_history_id`**: `String(64)`, 允许为空, Gmail API 增量游标。
+* **`is_active`**: `Boolean`, 默认 `True`, 是否启用同步。
+* **`needs_reauth`**: `Boolean`, 默认 `False`, 授权失效标识（为 `True` 时跳过同步）。
+* **`created_at` / `updated_at`**: `DateTime`, 创建与更新时间。
+
+#### 2. `gmail_messages` (邮件明细表)
+* **`id`**: `Integer`, 主键, 自增 (内部关联主键 `message_pk`)。
+* **`account_id`**: `Integer`, 外键关联 `gmail_accounts.id`。
+* **`message_id`**: `String(64)`, Gmail 官方全局唯一 Message ID。
+* **`from_email`**: `String(320)`, 发件人邮箱地址。
+* **`from_name`**: `String(320)`, 发件人显示名称。
+* **`subject`**: `Text`, 邮件主题。
+* **`body_text`**: `Text`, 清洗截断后的邮件正文。
+* **`received_at`**: `DateTime`, 允许为空, 邮件接收时间（带有索引 `ix_received_at`）。
+* **`is_filtered`**: `Boolean`, 默认 `False`, 是否被预过滤规则粗筛丢弃。
+* **唯一约束与索引**：`UniqueConstraint("account_id", "message_id", name="uq_account_message")` 保证同一账号不重复存入相同邮件。
+
+#### 3. `analysis_results` (AI 分析结果表)
+* **`id`**: `Integer`, 主键, 自增。
+* **`message_pk`**: `Integer`, 外键关联 `gmail_messages.id`，唯一约束 (`unique=True`)，即与邮件 1:1 关联。
+* **`category`**: `String(32)`, 默认 `"社交其他"`, 邮件分类（带有索引 `ix_category`）。
+* **`importance`**: `Integer`, 默认 `1`, 重要度 1-5（带有索引 `ix_importance`）。
+* **`one_line`**: `Text`, 一句话概述。
+* **`summary`**: `Text`, 重点要点摘要。
+* **`model_used`**: `String(64)`, 实际调用的 LLM 模型名称（如 `gpt-4o-mini`）。
+
+#### 4. `daily_digests` (每日汇总日报表)
+* **`id`**: `Integer`, 主键, 自增。
+* **`date`**: `String(10)`, 日期字符串（格式 `YYYY-MM-DD`）。
+* **`account_id`**: `Integer`, 外键关联 `gmail_accounts.id`。
+* **`total_emails`**: `Integer`, 当日邮件总数。
+* **`important_emails`**: `Integer`, 当日重要邮件总数（`importance >= 4`）。
+* **`content_md`**: `Text`, 渲染后的完整 Markdown 格式文本。
+* **唯一约束**：`UniqueConstraint("date", "account_id", name="uq_date_account")` 保证一个账号一天仅生成一份日报。
+
+---
+
+## 7. API 接口文档 (API Documentation)
+
+系统提供 RESTful HTML 页面路由以及 JSON 数据 API。所有看板与 API 端点均受 Cookie 认证保护（`/health` 和 `/login` 除外）。
+
+### 7.1 系统与认证接口
+
+| 接口地址 | HTTP 方法 | 鉴权方式 | 参数 / Body | 返回值 / 行为 |
+|---|---|---|---|---|
+| `/health` | `GET` | 无需认证 | 无 | `{"status": "ok"}` (云平台健康检查) |
+| `/login` | `GET` | 无需认证 | 无 | 渲染 `login.html` 登录页面 |
+| `/login` | `POST` | 无需认证 | Form 表单: `password` | 校验成功设置 `session` Cookie 并 303 重定向至 `/`；失败返回 401 JSON |
+| `/logout` | `POST` | Cookie | 无 | 清除 `session` Cookie 并重定向至 `/login` |
+
+### 7.2 Web 看板路由 (返回 HTMLResponse)
+
+| 接口地址 | HTTP 方法 | 鉴权依赖 | 描述 |
+|---|---|---|---|
+| `/` | `GET` | `require_page` | 概览主页，展示邮件总数、重要邮件数、分类统计与近14天日报列表 |
+| `/emails` | `GET` | `require_page` | 邮件列表页，支持 Query 参数: `category`, `importance`, `date_from`, `date_to`, `page` (默认1，每页25条) |
+| `/emails/{pk}` | `GET` | `require_page` | 邮件详情页，主键 `pk` 对应 `gmail_messages.id` |
+| `/digests` | `GET` | `require_page` | 历史日报归档列表页 (最近90天) |
+| `/digests/{day}`| `GET` | `require_page` | 日报详情页，路径参数 `day` 为 `YYYY-MM-DD` |
+
+### 7.3 JSON API 接口
+
+#### `GET /api/emails`
+* **鉴权依赖**：`require_api`（无有效 Cookie 时返回 `401 Unauthorized` JSON）。
+* **Query 参数**：
+  * `limit`: `int`, 默认 20。
+  * `offset`: `int`, 默认 0。
+  * `category`: `str`, 可选分类。
+  * `importance`: `int`, 可选重要度 (1-5)。
+* **返回值结构**：
+```json
+{
+  "items": [
+    {
+      "id": 102,
+      "from": "alert@broker.com",
+      "subject": "保证金不足通知",
+      "received_at": "2026-06-29T08:30:00",
+      "category": "金融·账户告警",
+      "importance": 5,
+      "one_line": "券商通知保证金不足，请及时补充"
+    }
+  ]
+}
+```
+
+---
+
+## 8. 配置项说明 (Configuration)
+
+配置项位于 `app/config.py` 中，在应用启动时自动实例化为全局单例 `settings`。配置项完全由环境变量提供，详细说明如下：
+
+| 环境变量名 | 类型 | 默认值 | 生产环境是否必须 | 影响模块 | 用途说明 |
+|---|---|---|---|---|---|
+| `GOOGLE_CLIENT_ID` | String | 无 (触发 KeyError) | **是** | `gmail.py`, `authorize.py` | GCP OAuth 2.0 客户端 ID |
+| `GOOGLE_CLIENT_SECRET`| String | 无 (触发 KeyError) | **是** | `gmail.py`, `authorize.py` | GCP OAuth 2.0 客户端密钥 |
+| `GMAIL_EMAIL_N` | String | 无 | **是** (至少需1组) | `config.py`, `jobs.py` | 绑定的 Gmail 地址 (N 从 1 递增，如 `GMAIL_EMAIL_1`) |
+| `GMAIL_REFRESH_TOKEN_N`| String | 无 | **是** (至少需1组) | `config.py`, `jobs.py` | 对应 Gmail 的 OAuth 刷新令牌 (如 `GMAIL_REFRESH_TOKEN_1`) |
+| `LLM_API_BASE` | String | 无 (触发 KeyError) | **是** | `analyzer.py` | OpenAI 兼容的 API Base 地址 (如 `https://api.openai.com/v1`) |
+| `LLM_API_KEY` | String | 无 (触发 KeyError) | **是** | `analyzer.py` | LLM API 密钥 (`sk-...`) |
+| `LLM_MODEL` | String | `gpt-4o-mini` | 否 | `analyzer.py` | 调用的模型名称 (可指定 DeepSeek 等兼容模型) |
+| `DASHBOARD_PASSWORD` | String | 无 (触发 KeyError) | **是** | `main.py` | Web 看板登录密码 |
+| `SECRET_KEY` | String | 无 (触发 KeyError) | **是** | `auth.py` | Session Cookie 加密签名密钥 |
+| `DATABASE_URL` | String | `sqlite:////app/data/app.db` | 否 | `db.py` | 数据库连接字符串 (支持 SQLite 与 PostgreSQL) |
+| `SESSION_LIFETIME_DAYS`| Int | `7` | 否 | `auth.py`, `main.py` | 登录 Session 有效期 (天) |
+| `FETCH_INTERVAL_MINUTES`| Int | `5` | 否 | `scheduler.py` | 增量拉取与分析定时任务执行间隔 (分钟) |
+| `DIGEST_HOUR` | Int | `8` | 否 | `scheduler.py` | 每日生成邮件日报的时间点 (小时，24小时制) |
+| `TZ` | String | `Asia/Singapore` | 否 | `scheduler.py` | APScheduler 调度器时区设定 |
+| `BACKFILL_DAYS` | Int | `2` | 否 | `gmail.py` | 首次运行或 History 失效时的回溯抓取天数 |
+| `BODY_MAX_CHARS` | Int | `2000` | 否 | `cleaner.py` | 提交给 LLM 的正文最大字符截断长度 |
+| `IMPORTANCE_SUMMARY_THRESHOLD`| Int | `4` | 否 | `config.py` | 触发要点摘要生成的重要度门槛 |
+| `WHITELIST_FROM` | String | `""` | 否 | `prefilter.py` | 发件人白名单 (逗号分隔) |
+| `BLACKLIST_FROM` | String | `""` | 否 | `prefilter.py` | 发件人黑名单 (逗号分隔) |
+
+---
+
+## 9. 定时任务与后台 Job (Scheduled Tasks)
+
+定时任务由 `app/scheduler.py` 中的 `AsyncIOScheduler` 管理，在 FastAPI 启动钩子 `@app.on_event("startup")` 中自动初始化运行。
+
+### 9.1 任务清单
+
+```mermaid
+graph LR
+    SCHED[AsyncIOScheduler]
+    JOB1[Job id='fetch': fetch_and_analyze]
+    JOB2[Job id='digest': run_daily_digest]
+
+    SCHED -->|Interval: settings.fetch_interval_minutes| JOB1
+    SCHED -->|Cron: hour=settings.digest_hour, minute=0| JOB2
+```
+
+| 任务 ID | 执行模式 | 触发规则 | 调用的函数 | 核心工作内容 | 潜在风险 |
+|---|---|---|---|---|---|
+| `fetch` | `interval` | 每 `FETCH_INTERVAL_MINUTES` 分钟 | `app.jobs.fetch_and_analyze` | 循环各账号抓取增量邮件、规则粗筛、LLM 识别并写入数据库 | ⚠️ 若 LLM 网关响应缓慢或并发变高，可能有阻塞风险。已设置 `coalesce=True`, `max_instances=1` 防止任务堆积。 |
+| `digest`| `cron` | 每天 `DIGEST_HOUR`:00 点 | `app.jobs.run_daily_digest` | 汇总当日收到的所有邮件及其分析结果，渲染 Markdown 并更新/插入 `daily_digests` | 🟢 计算量较小，风险较低。 |
+
+---
+
+## 10. Web 页面说明 (Web UI & Pages)
+
+前端基于原生的 HTML5 + CSS3 (使用 `static/style.css` 定义的 CSS 自定义变量暗黑主题) 以及 Jinja2 服务端模板渲染构建，没有引入重型前端框架。
+
+```mermaid
+graph TD
+    LOGIN[login.html /login] -->|密码校验成功| DASH[dashboard.html /]
+    DASH -->|点击邮件导航/查看更多| EMAILS[emails.html /emails]
+    DASH -->|点击历史日报/具体日报| DIGESTS[digests.html /digests & digest_detail.html]
+    EMAILS -->|点击具体邮件| DETAIL[email_detail.html /emails/{pk}]
+    DIGESTS -->|点击具体日期| DDETAIL[digest_detail.html /digests/{day}]
+```
+
+### 10.1 页面明细
+
+1. **登录页 (`login.html`)**：路径 `/login`。提供居中的暗黑卡片表单，输入 `password` 提交至 `POST /login`。
+2. **概览看板主页 (`dashboard.html`)**：路径 `/`。
+   * **指标卡片**：展示分析邮件总数 (`total`) 与重要邮件数 (`important`)。
+   * **分类分布**：展示 6 大分类的邮件数量分布卡片。
+   * **最近日报**：列表展示最近 14 天生成的日报摘要，支持直接点击进入详情。
+3. **邮件列表页 (`emails.html`)**：路径 `/emails`。
+   * **筛选表单**：支持按分类下拉框、重要度下拉框、起始与截止日期多维度组合筛选。
+   * **邮件列表**：展示发件人、主题、时间、分类 Badge、重要度 Badge（1-5 级不同颜色展示）。
+   * **分页控件**：支持上一页/下一页导航。
+4. **邮件详情页 (`email_detail.html`)**：路径 `/emails/{pk}`。顶部展示一句话总结与关键要点卡片，底部展示清洗截断后的邮件原始文本。
+5. **日报归档页与详情页 (`digests.html`, `digest_detail.html`)**：路径 `/digests` 与 `/digests/{day}`。展示 Markdown 格式渲染的每日要点总结。
+
+---
+
+## 11. 代码规范与部署 (Coding Standards & Deployment)
+
+### 11.1 项目代码规范
+* **类型标注**：全面使用 Python 3.10+ 原生类型标注（如 `list[dict]`, `str | None`），严禁在新增代码中混用 `typing.Optional` 或 `typing.List`。
+* **数据库操作**：严格使用 SQLAlchemy 2.0 风格的 `select(...)` 以及 `Mapped[...]` / `mapped_column(...)` 声明语法。所有 Session 操作在使用完后必须放在 `try ... finally: db.close()` 中确保释放。
+* **异常处理与日志**：在 Job 和网络请求层捕获具体异常（如 `google.auth.exceptions.RefreshError`），使用 `logging.getLogger("jobs")` 记录日志，严禁吞掉异常或打印空 `except: pass`。
+* **配置管理**：禁止在业务逻辑中直接读取 `os.environ`，必须统一通过 `app.config.settings` 单例属性访问。
+
+### 11.2 部署与容器化规范
+* **Docker 部署**：基于 `python:3.11-slim` 构建，指定工作目录 `/app`，挂载卷路径为 `/app/data`（用于持久化 SQLite 或日志数据）。
+* **Railway 云平台接入**：基于 `railway.toml` 配置文件部署，暴露 `8000` 端口，服务启动命令为 `uvicorn app.main:app --host 0.0.0.0 --port 8000`，健康检查路径为 `/health`。
+
+---
+
+## 12. 技术债与已知风险 (Technical Debt & Risks)
+
+项目通过审计识别出以下不同等级的技术债与潜在风险点，后续 AI 或开发者在重构时需重点关注：
+
+### 12.1 高风险 (High Priority)
+1. **SQLite 线程与并发死锁风险**：
+   * *现状*：默认数据库连接为 SQLite (`sqlite:////app/data/app.db`)，在 `app/db.py` 中配置了 `check_same_thread: False`。
+   * *风险*：FastAPI 的 Web 请求线程与 APScheduler 后台异步 Task 会并发读写 SQLite，在并发写入较高时极易触发 `sqlite3.OperationalError: database is locked`。建议生产环境强依赖 PostgreSQL。
+2. **LLM 异步调用与同步 DB 阻塞冲突**：
+   * *现状*：`fetch_and_analyze()` 为 `async def`，但在循环内使用了同步的 SQLAlchemy `SessionLocal` 操作（`db.commit()`, `db.scalar()` 等）。
+   * *风险*：同步的数据库 I/O 可能会短暂阻塞 FastAPI 的事件循环 (Event Loop)。
+
+### 12.2 中风险 (Medium Priority)
+1. **硬编码分类与 Prompt 耦合**：
+   * *现状*：分类列表 `["紧急·需回复", "金融·账户告警", "法律·合同", "重要通知", "订阅·营销", "社交其他"]` 同时分散写在 `analyzer.py`, `digest.py`, `main.py` 以及 `models.py` 的默认值中。
+   * *问题*：若后续需要调整分类或新增分类，需要在 4 个文件中同步修改，极易遗漏发生不一致。
+2. **FastAPI `@app.on_event("startup")` 弃用警告**：
+   * *现状*：`app/main.py` 仍在使用已弃用的 `on_event` 钩子启动数据库和调度器。
+   * *改进建议*：后续重构应迁移至 FastAPI 推荐的 `lifespan` contextmanager 机制。
+
+### 12.3 低风险 (Low Priority)
+1. **测试套件缺失**：仓库内目前没有任何 `tests/` 目录或单元测试文件，修改代码缺乏自动化测试保障。
+2. **历史根目录 markdown 冗余**：根目录保留了 3 份不同阶段的 markdown 设计文档，易对新开发者造成信息混淆。
+
+---
+
+## 13. 文件与目录清理建议 (Deletion Recommendations)
+
+针对仓库中的非核心文件，在保持业务代码绝对安全的前提下，提出以下整理与清理建议：
+
+| 目标文件 / 目录 | 评估分类 | 删除 / 整理依据 | 处理建议 |
+|---|---|---|---|
+| `Gmail-AI-Email-Analysis-Tech-Spec.md` | 历史文档 | 项目早期详细设计规格，其中部分设计（如 LiteLLM 模型路由）在后续迭代中已被放弃。 | 建议归档至 `docs/archive/` 目录或删除，避免混淆。 |
+| `gmail-ai-技术开发方案.md` | 历史文档 | 早期开发方案，内容已被代码和精简版文档覆盖。 | 建议归档至 `docs/archive/` 目录或删除。 |
+| `gmail-ai-邮件分析系统-精简版.md` | 历史文档 | 对应 v0.2 版本的框架说明，其核心要点已被全面收录至本 `PROJECT_CONTEXT.md`。 | 建议归档至 `docs/archive/` 目录或删除。 |
+| `client_secret.json` (若存在) | 临时机密文件 | 用于本地运行 `scripts/authorize.py` 的 GCP 客户端私钥，严禁提交至 Git 仓库。 | 确认 `.gitignore` 中包含该文件，禁止提交。 |
+
+---
+
+## 14. AI 开发规范 (AI Development Rules)
+
+**所有后续参与本仓库开发的 AI 助手（包括但不限于 Claude Code, Cursor, ChatGPT, Antigravity 等）在接收到代码修改指令时，必须严格遵守以下 10 条铁律**：
+
+1. **必须首先阅读 `PROJECT_CONTEXT.md`**：在对任何代码进行阅读、分析、新增或修改前，必须全面理解本文档所梳理的系统架构、数据流动与模块边界。
+2. **必须理解完整调用链**：修改任意函数（例如 `gmail.py` 或 `cleaner.py` 中的函数）前，必须通过 Grep / 搜索定位其在 `jobs.py` 或 `main.py` 中的所有上游调用方与下游依赖。
+3. **必须确认修改影响范围**：涉及 ORM 模型 (`models.py`) 或配置项 (`config.py`) 的改动，必须评估对数据库迁移、环境变量加载以及现存数据的一致性影响。
+4. **优先复用已有模块与工具类**：禁止重复编写 HTML 清洗、字符串截断、Session 校验或 LLM 客户端代码。必须优先复用 `cleaner.py`, `auth.py`, `analyzer.py` 等已有模块。
+5. **严禁重复造轮子**：系统已具备完整的增量抓取、规则过滤、LLM 分析与 Markdown 渲染能力，不得引入功能重叠的新第三方依赖库或重复的方法实现。
+6. **不得凭空新增重叠功能**：不得在未与用户协商的前提下新增多租户、邮件发送、复杂的模型路由网关等非目标（Non-Goals）功能。
+7. **保持架构与代码风格一致**：必须严格遵循 FastAPI Depends 依赖注入模式、SQLAlchemy 2.0 映射语法、PEP8 编码规范以及 Python 3.10+ 原生类型标注。
+8. **修改完成后同步更新 `PROJECT_CONTEXT.md`**：如果修改涉及配置环境变量、API 路由、数据库字段或业务流程的变更，必须在完成代码修改后立即同步更新本文档对应章节。
+9. **新增模块必须补充完整文档**：若新增了服务模块、工具脚本或模板页面，必须在本文档的 [系统目录说明](#3-系统目录说明-directory-structure) 及相关章节中补充详细职责说明。
+10. **架构变更必须更新架构图**：若调整了模块间调用关系、引入了新的后台任务或外部服务，必须更新本文档第 2 章中的 Mermaid 架构图与数据流图。

@@ -1,34 +1,56 @@
 {% extends "base.html" %}
-{% block title %}{{ m.subject }} — 邮件分析{% endblock %}
+{% block title %}{{ m.subject }} — 邮件详情{% endblock %}
 {% block body %}
-<a href="/emails" class="back-link">&larr; 返回列表</a>
+
+<a href="/emails" class="back-link">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+  返回邮件列表
+</a>
 
 <article class="detail-card">
   <h1 class="detail-title">{{ m.subject }}</h1>
+  
   <div class="detail-meta">
-    <span>发件人:{{ m.from_name }} &lt;{{ m.from_email }}&gt;</span>
-    <span>{{ m.received_at.strftime('%Y-%m-%d %H:%M') if m.received_at else '' }}</span>
+    <span>
+      <strong style="color:var(--text-main);">发件人：</strong>
+      {{ m.from_name }} &lt;{{ m.from_email }}&gt;
+    </span>
+    <span>
+      <strong style="color:var(--text-main);">接收时间：</strong>
+      {{ m.received_at.strftime('%Y-%m-%d %H:%M') if m.received_at else '' }}
+    </span>
   </div>
 
   <div class="detail-badges">
-    <span class="cat-badge">{{ a.category }}</span>
-    <span class="imp imp{{ a.importance }}">重要度 {{ a.importance }}</span>
+    <span class="cat-badge" style="font-size:12px; padding:3px 12px;">{{ a.category }}</span>
+    <span class="imp imp{{ a.importance }}" style="font-size:12px; padding:3px 12px;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+      重要度 Level {{ a.importance }}
+    </span>
   </div>
 
   {% if a.one_line %}
   <div class="detail-oneline">
-    <strong>摘要:</strong> {{ a.one_line }}
+    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem; color:var(--primary); font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:0.05em;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+      AI 核心提炼
+    </div>
+    {{ a.one_line }}
   </div>
   {% endif %}
 
   {% if a.summary %}
   <div class="detail-summary">
-    <strong>要点:</strong>
+    <div style="display:flex; align-items:center; gap:0.5rem; color:var(--imp4); font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:0.05em;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+      关键要点分析
+    </div>
     <p>{{ a.summary }}</p>
   </div>
   {% endif %}
 
-  <h2>正文</h2>
+  <h2>邮件原文内容</h2>
   <pre class="email-body">{{ m.body_text }}</pre>
 </article>
+
 {% endblock %}

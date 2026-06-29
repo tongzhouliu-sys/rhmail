@@ -9,7 +9,6 @@ from app.config import settings
 from app.db import SessionLocal, init_db
 from app.models import GmailMessage, AnalysisResult, DailyDigest
 from app.auth import make_cookie, require_page, require_api, COOKIE_NAME, _valid
-from app.scheduler import start_scheduler
 
 logging.basicConfig(level=logging.INFO)
 app = FastAPI(title="Gmail AI Analyzer", version="1.0")
@@ -22,7 +21,6 @@ CATEGORIES = ["紧急·需回复", "金融·账户告警", "法律·合同", "�
 @app.on_event("startup")
 async def _startup():
     init_db()
-    start_scheduler()
 
 
 @app.get("/health")

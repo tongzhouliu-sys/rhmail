@@ -1,20 +1,40 @@
 {% extends "base.html" %}
-{% block title %}{{ day }} 日报 — 邮件分析{% endblock %}
+{% block title %}{{ day }} AI 智能分析日报{% endblock %}
 {% block body %}
-<a href="/digests" class="back-link">&larr; 返回日报列表</a>
 
-<h1 class="page-title">{{ day }} 日报</h1>
+<a href="/digests" class="back-link">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+  返回日报列表
+</a>
+
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
+  <h1 class="page-title" style="margin-bottom:0;">{{ day }} 分析日报</h1>
+</div>
 
 {% if items %}
   {% for d in items %}
   <div class="digest-block">
     <div class="digest-stats">
-      共 {{ d.total_emails }} 封 · 需关注 {{ d.important_emails }} 封
+      <span class="cat-badge" style="background:rgba(99,102,241,0.1); color:var(--primary); border-color:rgba(99,102,241,0.2); padding:4px 12px; font-size:13px;">
+        邮件总数：{{ d.total_emails }} 封
+      </span>
+      {% if d.important_emails %}
+      <span class="highlight-badge" style="padding:4px 12px; font-size:13px;">
+        重点关注：{{ d.important_emails }} 封
+      </span>
+      {% else %}
+      <span class="cat-badge" style="background:rgba(16,185,129,0.1); color:#34d399; border-color:rgba(16,185,129,0.2); padding:4px 12px; font-size:13px;">
+        无需紧急关注项
+      </span>
+      {% endif %}
     </div>
     <pre class="digest-content">{{ d.content_md }}</pre>
   </div>
   {% endfor %}
 {% else %}
-<p class="muted">该日期暂无日报。</p>
+<div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:3rem 0; text-align:center;">
+  <p class="muted">该日期暂无日报内容</p>
+</div>
 {% endif %}
+
 {% endblock %}

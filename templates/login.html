@@ -3,16 +3,24 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>登录 — 邮件分析</title>
+  <title>登录 — RHMail AI 智能看板</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="login-page">
   <div class="login-card">
-    <h1>&#128140; 邮件分析</h1>
-    <p class="muted">输入密码登录看板</p>
+    <h1>
+      <div class="brand-logo" style="width:40px; height:40px; margin:0 auto 0.5rem auto;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+          <polyline points="22,6 12,13 2,6"></polyline>
+        </svg>
+      </div>
+      RHMail AI
+    </h1>
+    <p class="muted">请输入密码以接入智能分析看板</p>
     <form id="f" method="post" action="/login">
-      <input type="password" name="password" placeholder="密码" required autofocus>
-      <button type="submit">登录</button>
+      <input type="password" name="password" placeholder="请输入系统访问密码" required autofocus>
+      <button type="submit">解 锁 登 录</button>
     </form>
     <p id="err" class="err"></p>
   </div>
@@ -24,7 +32,7 @@
       if (r.redirected) {
         location.href = r.url;
       } else {
-        document.getElementById('err').textContent = '密码错误,请重试';
+        document.getElementById('err').textContent = '密码验证失败，请核对后重试';
       }
     });
   </script>

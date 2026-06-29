@@ -1,23 +1,43 @@
 {% extends "base.html" %}
-{% block title %}日报列表 — 邮件分析{% endblock %}
+{% block title %}日报列表 — RHMail AI 智能分析{% endblock %}
 {% block body %}
-<h1 class="page-title">日报</h1>
+
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
+  <h1 class="page-title" style="margin-bottom:0;">每日 AI 分析报告汇总</h1>
+</div>
 
 {% if items %}
-<ul class="digest-list full">
+<ul class="digest-list">
   {% for d in items %}
   <li>
     <a href="/digests/{{ d.date }}">
-      <span class="digest-date">{{ d.date }}</span>
-      <span class="digest-meta">
-        共 {{ d.total_emails }} 封
-        {% if d.important_emails %} · <span class="highlight-text">需关注 {{ d.important_emails }} 封</span>{% endif %}
-      </span>
+      <div style="display:flex; align-items:center; gap:1rem;">
+        <div class="digest-icon-box">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+        </div>
+        <div>
+          <div class="digest-date">{{ d.date }} 聚合日报</div>
+          <div class="digest-meta">处理全天邮件共 {{ d.total_emails }} 封</div>
+        </div>
+      </div>
+      <div>
+        {% if d.important_emails %}
+        <span class="highlight-badge">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          需关注 {{ d.important_emails }} 封
+        </span>
+        {% else %}
+        <span class="cat-badge" style="background:rgba(16,185,129,0.1); color:#34d399; border-color:rgba(16,185,129,0.2);">全部处理完毕</span>
+        {% endif %}
+      </div>
     </a>
   </li>
   {% endfor %}
 </ul>
 {% else %}
-<p class="muted">暂无日报记录。</p>
+<div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:3rem 0; text-align:center;">
+  <p class="muted">暂无日报历史记录</p>
+</div>
 {% endif %}
+
 {% endblock %}

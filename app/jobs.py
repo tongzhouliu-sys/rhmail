@@ -1,13 +1,16 @@
+import asyncio
 import logging
+import sys
 from datetime import date, datetime, timedelta
 from sqlalchemy import select
 
-from app.db import SessionLocal
+from app.db import SessionLocal, init_db
 from app.models import GmailAccount, GmailMessage, AnalysisResult, DailyDigest
 from app.config import settings
 from app import gmail, prefilter, cleaner, analyzer, digest
 from google.auth.exceptions import RefreshError
 
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("jobs")
 
 
@@ -22,7 +25,7 @@ def _sync_accounts_from_config(db) -> None:
     db.commit()
 
 
-async def fetch_and_analyze() -> None:
+async def fetch_and_analyze() -> None:  # noqa: C901
     db = SessionLocal()
     try:
         _sync_accounts_from_config(db)
@@ -128,3 +131,15 @@ async def run_daily_digest() -> None:
             db.commit()
     finally:
         db.close()
+
+
+if __name__ == "__main__":
+    cmd = sys.argv[1] if len(sys.argv) > 1 else ""
+    init_db()
+    if cmd == "fetch":
+        asyncio.run(fetch_and_analyze())
+    elif cmd == "digest":
+        asyncio.run(run_daily_digest())
+    else:
+        print("Usage: python -m app.jobs fetch | digest", file=sys.stderr)
+        sys.exit(1)
