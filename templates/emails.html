@@ -25,11 +25,11 @@
 
     <div class="sidebar-section-title" style="margin-top: 1.5rem;">邮件分类 Label</div>
     {% for c in categories %}
-    {% set cnt = by_cat.get(c, 0) %}
-    <a href="/emails?category={{ c|urlencode }}" class="sidebar-item {% if f.category == c %}active{% endif %}">
+    {% set cnt = by_cat.get(c.name, 0) %}
+    <a href="/emails?category={{ c.slug }}" class="sidebar-item {% if f.category == c.slug or f.category_name == c.name %}active{% endif %}">
       <div class="sidebar-item-label">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle></svg>
-        {{ c }}
+        {{ c.name }}
       </div>
       {% if cnt %}
       <span class="sidebar-count">{{ cnt }}</span>
@@ -42,8 +42,8 @@
   <main class="gmail-content">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem;">
       <h1 class="page-title" style="margin-bottom:0; font-size: 20px;">
-        {% if f.category %}
-          分类：{{ f.category }}
+        {% if f.category_name %}
+          分类：{{ f.category_name }}
         {% elif f.importance >= 4 %}
           重点关注邮件列表
         {% else %}

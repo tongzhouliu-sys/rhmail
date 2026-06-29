@@ -1,7 +1,7 @@
 import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Depends, Request, Form, Query, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func
@@ -12,14 +12,37 @@ from app.models import GmailMessage, AnalysisResult, DailyDigest
 from app.auth import make_cookie, require_page, require_api, COOKIE_NAME, _valid
 from app.jobs import fetch_and_analyze, run_daily_digest
 
+from app.cleaner import clean_text
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
 
 app = FastAPI(title="Gmail AI Analyzer", version="1.0")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+templates.env.filters["clean_text"] = clean_text
 
-CATEGORIES = ["紧急·需回复", "金融·账户告警", "法律·合同", "重要通知", "订阅·营销", "社交其他"]
+CATEGORY_MAP = {
+    "urgent": "紧急·需回复",
+    "finance": "金融·账户告警",
+    "legal": "法律·合同",
+    "notice": "重要通知",
+    "marketing": "订阅·营销",
+    "social": "社交其他",
+}
+REV_CATEGORY_MAP = {v: k for k, v in CATEGORY_MAP.items()}
+CATEGORIES_LIST = [{"slug": s, "name": n} for s, n in CATEGORY_MAP.items()]
+
+
+def resolve_category_name(cat_input: str) -> str:
+    if not cat_input:
+        return ""
+    return CATEGORY_MAP.get(cat_input, cat_input)
+
+
+def get_category_slug(cat_name: str) -> str:
+    return REV_CATEGORY_MAP.get(cat_name, cat_name)
+
 
 scheduler = AsyncIOScheduler(timezone=settings.timezone)
 
@@ -54,6 +77,11 @@ async def _shutdown():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse("static/favicon.png")
 
 
 
@@ -108,7 +136,7 @@ async def dashboard(request: Request):
             "total": total,
             "important": important,
             "by_cat": by_cat,
-            "categories": CATEGORIES,
+            "categories": CATEGORIES_LIST,
             "digests": digests,
         })
     finally:
@@ -127,12 +155,15 @@ async def emails_page(
     db = SessionLocal()
     try:
         limit = 25
+        cat_name = resolve_category_name(category)
+        cat_slug = get_category_slug(cat_name) if cat_name else ""
+
         q = (
             select(GmailMessage, AnalysisResult)
             .join(AnalysisResult, AnalysisResult.message_pk == GmailMessage.id)
         )
-        if category:
-            q = q.where(AnalysisResult.category == category)
+        if cat_name:
+            q = q.where(AnalysisResult.category == cat_name)
         if importance:
             q = q.where(AnalysisResult.importance == importance)
         if date_from:
@@ -157,11 +188,12 @@ async def emails_page(
             "total": total,
             "page": page,
             "pages": max(1, -(-total // limit)),
-            "categories": CATEGORIES,
+            "categories": CATEGORIES_LIST,
             "by_cat": by_cat,
             "important_count": important_count,
             "f": {
-                "category": category,
+                "category": cat_slug,
+                "category_name": cat_name,
                 "importance": importance,
                 "date_from": date_from,
                 "date_to": date_to,
@@ -184,7 +216,22 @@ async def email_detail(request: Request, pk: int):
         if not row:
             raise HTTPException(404)
         m, a = row
-        return templates.TemplateResponse("email_detail.html", {"request": request, "m": m, "a": a})
+        by_cat = dict(
+            db.execute(
+                select(AnalysisResult.category, func.count()).group_by(AnalysisResult.category)
+            ).all()
+        )
+        important_count = db.scalar(
+            select(func.count(AnalysisResult.id)).where(AnalysisResult.importance >= 4)
+        ) or 0
+        return templates.TemplateResponse("email_detail.html", {
+            "request": request,
+            "m": m,
+            "a": a,
+            "categories": CATEGORIES_LIST,
+            "by_cat": by_cat,
+            "important_count": important_count,
+        })
     finally:
         db.close()
 
@@ -227,12 +274,13 @@ async def api_emails(
 ):
     db = SessionLocal()
     try:
+        cat_name = resolve_category_name(category)
         q = (
             select(GmailMessage, AnalysisResult)
             .join(AnalysisResult, AnalysisResult.message_pk == GmailMessage.id)
         )
-        if category:
-            q = q.where(AnalysisResult.category == category)
+        if cat_name:
+            q = q.where(AnalysisResult.category == cat_name)
         if importance:
             q = q.where(AnalysisResult.importance == importance)
         rows = db.execute(
@@ -252,3 +300,4 @@ async def api_emails(
         ]}
     finally:
         db.close()
+

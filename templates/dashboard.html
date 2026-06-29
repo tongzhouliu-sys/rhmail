@@ -48,12 +48,12 @@
 <h2>按分类统计 (点击查看对应列表)</h2>
 <div class="cat-grid">
   {% for cat in categories %}
-  {% set count = by_cat.get(cat, 0) %}
+  {% set count = by_cat.get(cat.name, 0) %}
   {% set pct = (count / total * 100) if total > 0 else 0 %}
-  <a href="/emails?category={{ cat|urlencode }}" class="cat-card clickable-card">
+  <a href="/emails?category={{ cat.slug }}" class="cat-card clickable-card">
     <div class="cat-name">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg>
-      {{ cat }}
+      {{ cat.name }}
     </div>
     <div class="cat-count">{{ count }}</div>
     <div class="cat-progress">
