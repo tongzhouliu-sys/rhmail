@@ -318,12 +318,19 @@ async def accounts_page(request: Request, msg: str = Query("")):
         db.close()
 
 
+def get_redirect_uri(request: Request) -> str:
+    if settings.oauth_redirect_uri:
+        return settings.oauth_redirect_uri
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
+    return f"{scheme}://{request.url.netloc}/oauth/callback"
+
+
 @app.get("/accounts/add", dependencies=[Depends(require_page)])
 async def accounts_add(request: Request):
     """Initiate the Google OAuth flow to add a new Gmail account."""
     state = oauth.generate_state()
-    # Store state in a short-lived cookie for CSRF verification
-    auth_url = oauth.get_auth_url(state)
+    redirect_uri = get_redirect_uri(request)
+    auth_url = oauth.get_auth_url(state, redirect_uri=redirect_uri)
     resp = RedirectResponse(auth_url, status_code=302)
     resp.set_cookie("oauth_state", state, max_age=600, httponly=True, samesite="lax")
     return resp
@@ -347,7 +354,8 @@ async def oauth_callback(
         return RedirectResponse("/accounts?msg=授权验证失败(state 不匹配)", status_code=302)
 
     try:
-        result = await oauth.exchange_code(code)
+        redirect_uri = get_redirect_uri(request)
+        result = await oauth.exchange_code(code, redirect_uri=redirect_uri)
     except ValueError as e:
         log.exception("OAuth exchange failed: %s", e)
         return RedirectResponse(f"/accounts?msg=授权交换失败: {e}", status_code=302)
@@ -396,7 +404,7 @@ async def toggle_account(account_id: int):
 
 
 @app.get("/api/accounts/{account_id}/reauth", dependencies=[Depends(require_page)])
-async def reauth_account(account_id: int):
+async def reauth_account(account_id: int, request: Request):
     """Re-initiate OAuth for an account that needs re-authorization."""
     db = SessionLocal()
     try:
@@ -407,7 +415,8 @@ async def reauth_account(account_id: int):
         db.close()
     # Redirect into the standard OAuth flow
     state = oauth.generate_state()
-    auth_url = oauth.get_auth_url(state)
+    redirect_uri = get_redirect_uri(request)
+    auth_url = oauth.get_auth_url(state, redirect_uri=redirect_uri)
     resp = RedirectResponse(auth_url, status_code=302)
     resp.set_cookie("oauth_state", state, max_age=600, httponly=True, samesite="lax")
     return resp

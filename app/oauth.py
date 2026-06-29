@@ -30,15 +30,16 @@ def generate_state() -> str:
     return secrets.token_urlsafe(32)
 
 
-def get_auth_url(state: str) -> str:
+def get_auth_url(state: str, redirect_uri: str = "") -> str:
     """
     Build the Google OAuth 2.0 authorization URL.
 
     The user's browser will be redirected here to grant gmail.readonly access.
     """
+    uri = redirect_uri or settings.oauth_redirect_uri
     params = {
         "client_id": settings.google_client_id,
-        "redirect_uri": settings.oauth_redirect_uri,
+        "redirect_uri": uri,
         "response_type": "code",
         "scope": " ".join(SCOPES),
         "access_type": "offline",
@@ -48,7 +49,7 @@ def get_auth_url(state: str) -> str:
     return f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
 
 
-async def exchange_code(code: str) -> dict:
+async def exchange_code(code: str, redirect_uri: str = "") -> dict:
     """
     Exchange the authorization code for tokens and retrieve the Gmail address.
 
@@ -62,12 +63,13 @@ async def exchange_code(code: str) -> dict:
     Raises:
         ValueError: if the token exchange or Gmail API call fails.
     """
+    uri = redirect_uri or settings.oauth_redirect_uri
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.post(GOOGLE_TOKEN_URL, data={
             "code": code,
             "client_id": settings.google_client_id,
             "client_secret": settings.google_client_secret,
-            "redirect_uri": settings.oauth_redirect_uri,
+            "redirect_uri": uri,
             "grant_type": "authorization_code",
         })
         if resp.status_code != 200:
