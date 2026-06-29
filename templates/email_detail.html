@@ -3,10 +3,12 @@
 {% block title %}{{ m.subject }} — 邮件详情{% endblock %}
 {% block body %}
 
-<a href="/emails" class="back-link">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-  返回邮件列表
-</a>
+<div class="sticky-back-bar">
+  <a href="/emails" class="back-link">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+    返回邮件列表
+  </a>
+</div>
 
 <article class="detail-card">
   <h1 class="detail-title">{{ m.subject }}</h1>
@@ -42,11 +44,14 @@
 
   {% if a.summary %}
   <div class="detail-summary">
-    <div style="display:flex; align-items:center; gap:0.5rem; color:var(--imp4); font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">
+    <div class="summary-header">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
       中文内容概要 (AI 翻译与梳理)
     </div>
-    <div class="summary-content">{{ a.summary }}</div>
+    <div class="summary-content markdown-body">
+      <textarea class="markdown-raw" style="display:none;">{{ a.summary }}</textarea>
+      <div class="markdown-target">{{ a.summary | markdown | safe }}</div>
+    </div>
   </div>
   {% endif %}
 

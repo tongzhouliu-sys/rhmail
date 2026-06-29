@@ -2,10 +2,12 @@
 {% block title %}{{ day }} AI 智能分析日报{% endblock %}
 {% block body %}
 
-<a href="/digests" class="back-link">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-  返回日报列表
-</a>
+<div class="sticky-back-bar">
+  <a href="/digests" class="back-link">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+    返回日报列表
+  </a>
+</div>
 
 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
   <h1 class="page-title" style="margin-bottom:0;">{{ day }} 分析日报</h1>
@@ -27,8 +29,10 @@
         无需紧急关注项
       </span>
       {% endif %}
+    <div class="digest-content markdown-body">
+      <textarea class="markdown-raw" style="display:none;">{{ d.content_md }}</textarea>
+      <div class="markdown-target">{{ d.content_md | markdown | safe }}</div>
     </div>
-    <pre class="digest-content">{{ d.content_md }}</pre>
   </div>
   {% endfor %}
 {% else %}

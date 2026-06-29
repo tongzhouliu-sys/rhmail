@@ -13,7 +13,7 @@ from app.auth import make_cookie, require_page, require_api, COOKIE_NAME, _valid
 from app.jobs import fetch_and_analyze, run_daily_digest
 from app import oauth
 
-from app.cleaner import clean_text
+from app.cleaner import clean_text, render_markdown
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
@@ -22,6 +22,7 @@ app = FastAPI(title="Gmail AI Analyzer", version="1.0")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 templates.env.filters["clean_text"] = clean_text
+templates.env.filters["markdown"] = render_markdown
 
 CATEGORY_MAP = {
     "urgent": "紧急·需回复",
@@ -332,6 +333,8 @@ def get_redirect_uri(request: Request) -> str:
 @app.get("/auth/google")
 async def accounts_add(request: Request):
     """Initiate the Google OAuth flow to add a Gmail account and auto-authenticate dashboard session."""
+    if not settings.google_client_id or not settings.google_client_secret:
+        return RedirectResponse("/accounts?msg=错误：未配置 GOOGLE_CLIENT_ID 或 GOOGLE_CLIENT_SECRET 环境变量", status_code=302)
     state = oauth.generate_state()
     redirect_uri = get_redirect_uri(request)
     auth_url = oauth.get_auth_url(state, redirect_uri=redirect_uri)

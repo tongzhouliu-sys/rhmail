@@ -22,11 +22,18 @@ def _get_database_url() -> str:
     url = os.environ.get("DATABASE_URL", "sqlite:////app/data/app.db")
     if url.startswith("sqlite:////"):
         db_path = url.replace("sqlite:////", "/", 1)
-        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        try:
+            os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        except OSError:
+            os.makedirs("data", exist_ok=True)
+            url = "sqlite:///data/app.db"
     elif url.startswith("sqlite:///"):
         db_path = url.replace("sqlite:///", "", 1)
         if os.path.dirname(db_path):
-            os.makedirs(os.path.dirname(db_path), exist_ok=True)
+            try:
+                os.makedirs(os.path.dirname(db_path), exist_ok=True)
+            except OSError:
+                url = "sqlite:///app.db"
     elif url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql+psycopg://", 1)
     elif url.startswith("postgresql://"):

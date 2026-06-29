@@ -57,3 +57,67 @@ def _strip_signature(text: str) -> str:
             text = text.split(sep)[0]
     return text
 
+
+def render_markdown(md_text: str | None) -> str:
+    if not md_text:
+        return ""
+    
+    text = html.escape(str(md_text).strip())
+    
+    text = re.sub(r'^### (.*?)$', r'<h3>\1</h3>', text, flags=re.MULTILINE)
+    text = re.sub(r'^## (.*?)$', r'<h2>\1</h2>', text, flags=re.MULTILINE)
+    text = re.sub(r'^# (.*?)$', r'<h1>\1</h1>', text, flags=re.MULTILINE)
+    text = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', text)
+    text = re.sub(r'\*(.*?)\*', r'<em>\1</em>', text)
+    text = re.sub(r'`(.*?)`', r'<code>\1</code>', text)
+    
+    lines = text.splitlines()
+    in_ul = False
+    in_ol = False
+    new_lines = []
+    
+    for line in lines:
+        stripped = line.strip()
+        ul_match = re.match(r'^[\-\*]\s+(.*)$', stripped)
+        ol_match = re.match(r'^\d+\.\s+(.*)$', stripped)
+        
+        if ul_match:
+            if in_ol:
+                new_lines.append('</ol>')
+                in_ol = False
+            if not in_ul:
+                new_lines.append('<ul>')
+                in_ul = True
+            new_lines.append(f'<li>{ul_match.group(1)}</li>')
+        elif ol_match:
+            if in_ul:
+                new_lines.append('</ul>')
+                in_ul = False
+            if not in_ol:
+                new_lines.append('<ol>')
+                in_ol = True
+            new_lines.append(f'<li>{ol_match.group(1)}</li>')
+        else:
+            if in_ul:
+                new_lines.append('</ul>')
+                in_ul = False
+            if in_ol:
+                new_lines.append('</ol>')
+                in_ol = False
+            if stripped.startswith('<h') or stripped.startswith('<ul') or stripped.startswith('<ol'):
+                new_lines.append(stripped)
+            elif stripped:
+                new_lines.append(f'<p>{stripped}</p>')
+            else:
+                new_lines.append('')
+                
+    if in_ul:
+        new_lines.append('</ul>')
+    if in_ol:
+        new_lines.append('</ol>')
+        
+    res = "\n".join(new_lines)
+    res = re.sub(r'<p>\s*</p>', '', res)
+    return res
+
+
