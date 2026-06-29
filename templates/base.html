@@ -10,7 +10,7 @@
       document.documentElement.setAttribute('data-theme', savedTheme);
     })();
   </script>
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v=2.0">
 </head>
 <body>
   <header class="topbar">
@@ -97,10 +97,17 @@
         document.getElementById('nav-digests')?.classList.add('active');
       }
 
-      // 皮肤切换交互逻辑
+      // 皮肤切换交互逻辑与双重元素绑定
       const themePicker = document.getElementById('themePicker');
       const themePickerBtn = document.getElementById('themePickerBtn');
       const themeOptions = document.querySelectorAll('.theme-option');
+
+      function applyTheme(themeId) {
+        document.documentElement.setAttribute('data-theme', themeId);
+        document.body.setAttribute('data-theme', themeId);
+        localStorage.setItem('rhmail_theme', themeId);
+        updateActiveThemeUI(themeId);
+      }
 
       function updateActiveThemeUI(currentTheme) {
         themeOptions.forEach(opt => {
@@ -113,7 +120,7 @@
       }
 
       const initialTheme = localStorage.getItem('rhmail_theme') || 'dark-indigo';
-      updateActiveThemeUI(initialTheme);
+      applyTheme(initialTheme);
 
       themePickerBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -128,9 +135,7 @@
         opt.addEventListener('click', (e) => {
           e.stopPropagation();
           const themeId = opt.getAttribute('data-theme-id');
-          document.documentElement.setAttribute('data-theme', themeId);
-          localStorage.setItem('rhmail_theme', themeId);
-          updateActiveThemeUI(themeId);
+          applyTheme(themeId);
           themePicker?.classList.remove('open');
         });
       });

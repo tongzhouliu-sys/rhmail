@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-:root, html[data-theme="dark-indigo"] {
+:root, html[data-theme="dark-indigo"], body[data-theme="dark-indigo"], [data-theme="dark-indigo"] {
   --bg-base: #090d16;
   --bg-radial: radial-gradient(circle at 50% -20%, #1e1b4b 0%, #090d16 80%);
   --surface: rgba(20, 26, 40, 0.65);
@@ -26,7 +26,7 @@
   --dropdown-bg: rgba(19, 25, 38, 0.95);
 }
 
-html[data-theme="light"] {
+html[data-theme="light"], body[data-theme="light"], [data-theme="light"] {
   --bg-base: #f8fafc;
   --bg-radial: radial-gradient(circle at 50% -20%, #e0e7ff 0%, #f8fafc 80%);
   --surface: rgba(255, 255, 255, 0.85);
@@ -52,7 +52,7 @@ html[data-theme="light"] {
   --dropdown-bg: rgba(255, 255, 255, 0.96);
 }
 
-html[data-theme="emerald"] {
+html[data-theme="emerald"], body[data-theme="emerald"], [data-theme="emerald"] {
   --bg-base: #061712;
   --bg-radial: radial-gradient(circle at 50% -20%, #064e3b 0%, #061712 80%);
   --surface: rgba(11, 36, 29, 0.7);
@@ -78,7 +78,7 @@ html[data-theme="emerald"] {
   --dropdown-bg: rgba(13, 44, 36, 0.95);
 }
 
-html[data-theme="violet"] {
+html[data-theme="violet"], body[data-theme="violet"], [data-theme="violet"] {
   --bg-base: #14091f;
   --bg-radial: radial-gradient(circle at 50% -20%, #4c1d95 0%, #14091f 80%);
   --surface: rgba(32, 17, 48, 0.7);
