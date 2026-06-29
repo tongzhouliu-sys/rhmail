@@ -2,7 +2,7 @@ import asyncio
 import logging
 import sys
 from datetime import date, datetime, timedelta, timezone as tz
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from app.db import SessionLocal, init_db
 from app.models import GmailAccount, GmailMessage, AnalysisResult, DailyDigest
@@ -34,6 +34,12 @@ def _sync_accounts_from_config(db) -> None:
 
 async def fetch_and_analyze() -> None:  # noqa: C901
     db = SessionLocal()
+    _sem = asyncio.Semaphore(5)
+
+    async def _analyze_one(row_id: int, msg_data: dict):
+        async with _sem:
+            return row_id, await analyzer.analyze(msg_data)
+
     try:
         _sync_accounts_from_config(db)
         accounts = db.scalars(select(GmailAccount).where(GmailAccount.is_active == True)).all()
@@ -52,6 +58,8 @@ async def fetch_and_analyze() -> None:  # noqa: C901
                 log.exception("fetch failed for %s: %s", acc.email, e)
                 continue
 
+            # Phase 1: save all messages, collect those needing analysis
+            to_analyze: list[tuple[int, dict]] = []
             for msg in messages:
                 row = db.scalar(
                     select(GmailMessage).where(
@@ -78,13 +86,27 @@ async def fetch_and_analyze() -> None:  # noqa: C901
 
                 has_analysis = db.scalar(select(AnalysisResult.id).where(AnalysisResult.message_pk == row.id))
                 if not filtered and not has_analysis:
-                    res = await analyzer.analyze({
+                    to_analyze.append((row.id, {
                         "from_email": row.from_email,
                         "subject": row.subject,
                         "body_text": row.body_text,
-                    })
+                    }))
+
+            db.commit()
+
+            # Phase 2: concurrent LLM analysis
+            if to_analyze:
+                raw = await asyncio.gather(
+                    *[_analyze_one(rid, d) for rid, d in to_analyze],
+                    return_exceptions=True,
+                )
+                for item in raw:
+                    if isinstance(item, Exception):
+                        log.exception("LLM analysis failed: %s", item)
+                        continue
+                    row_id, res = item
                     db.add(AnalysisResult(
-                        message_pk=row.id,
+                        message_pk=row_id,
                         category=res["category"],
                         importance=res["importance"],
                         one_line=res["one_line"],
@@ -96,7 +118,7 @@ async def fetch_and_analyze() -> None:  # noqa: C901
             acc.last_history_id = new_hid
             acc.last_sync_at = datetime.now(tz.utc).replace(tzinfo=None)
             db.commit()
-            log.info("synced %s: %d new", acc.email, len(messages))
+            log.info("synced %s: %d new, %d analyzed", acc.email, len(messages), len(to_analyze))
     finally:
         db.close()
 
@@ -141,62 +163,75 @@ async def reanalyze_unanalyzed_messages() -> None:
 async def reanalyze_all_messages() -> None:
     """Full refresh: re-run AI analysis on EVERY non-filtered message and
     overwrite its existing AnalysisResult, regenerating summaries in the new
-    structured-block format. Per-message error isolation + progress logging."""
+    structured-block format. Per-message error isolation + progress logging.
+    Processes in batches of 100 to avoid loading the full table into memory."""
     db = SessionLocal()
     try:
-        rows = db.scalars(select(GmailMessage)).all()
-        total = len(rows)
+        total = db.scalar(select(func.count(GmailMessage.id))) or 0
         log.info("🔁 全量重刷：库内共 %d 封邮件，开始逐封重新分析...", total)
         done = analyzed = failed = 0
-        for row in rows:
-            done += 1
-            try:
-                filtered = prefilter.should_filter_out({
-                    "from_email": row.from_email,
-                    "subject": row.subject,
-                })
-                row.is_filtered = filtered
-                if not filtered:
-                    res = await analyzer.analyze({
+        batch_size = 100
+        offset = 0
+
+        while True:
+            rows = db.scalars(
+                select(GmailMessage).order_by(GmailMessage.id).limit(batch_size).offset(offset)
+            ).all()
+            if not rows:
+                break
+
+            for row in rows:
+                done += 1
+                try:
+                    filtered = prefilter.should_filter_out({
                         "from_email": row.from_email,
                         "subject": row.subject,
-                        "body_text": row.body_text,
                     })
-                    # Safety: if the LLM call failed, do NOT overwrite a good
-                    # existing summary with the failure placeholder.
-                    if str(res.get("summary", "")).startswith("(分析失败"):
-                        failed += 1
-                        log.warning("分析失败，保留原摘要 message_pk=%s", row.id)
-                        db.commit()
-                        if done % 20 == 0 or done == total:
-                            log.info("  进度 %d/%d（已分析 %d，失败 %d）", done, total, analyzed, failed)
-                        continue
-                    existing = db.scalar(
-                        select(AnalysisResult).where(AnalysisResult.message_pk == row.id)
-                    )
-                    if existing:
-                        existing.category = res["category"]
-                        existing.importance = res["importance"]
-                        existing.one_line = res["one_line"]
-                        existing.summary = res["summary"]
-                        existing.model_used = res["model_used"]
-                    else:
-                        db.add(AnalysisResult(
-                            message_pk=row.id,
-                            category=res["category"],
-                            importance=res["importance"],
-                            one_line=res["one_line"],
-                            summary=res["summary"],
-                            model_used=res["model_used"],
-                        ))
-                    analyzed += 1
-                db.commit()
-            except Exception as e:
-                db.rollback()
-                failed += 1
-                log.exception("重刷失败 message_pk=%s: %s", row.id, e)
-            if done % 20 == 0 or done == total:
-                log.info("  进度 %d/%d（已分析 %d，失败 %d）", done, total, analyzed, failed)
+                    row.is_filtered = filtered
+                    if not filtered:
+                        res = await analyzer.analyze({
+                            "from_email": row.from_email,
+                            "subject": row.subject,
+                            "body_text": row.body_text,
+                        })
+                        # Safety: if the LLM call failed, do NOT overwrite a good
+                        # existing summary with the failure placeholder.
+                        if str(res.get("summary", "")).startswith("(分析失败"):
+                            failed += 1
+                            log.warning("分析失败，保留原摘要 message_pk=%s", row.id)
+                            db.commit()
+                            if done % 20 == 0 or done == total:
+                                log.info("  进度 %d/%d（已分析 %d，失败 %d）", done, total, analyzed, failed)
+                            continue
+                        existing = db.scalar(
+                            select(AnalysisResult).where(AnalysisResult.message_pk == row.id)
+                        )
+                        if existing:
+                            existing.category = res["category"]
+                            existing.importance = res["importance"]
+                            existing.one_line = res["one_line"]
+                            existing.summary = res["summary"]
+                            existing.model_used = res["model_used"]
+                        else:
+                            db.add(AnalysisResult(
+                                message_pk=row.id,
+                                category=res["category"],
+                                importance=res["importance"],
+                                one_line=res["one_line"],
+                                summary=res["summary"],
+                                model_used=res["model_used"],
+                            ))
+                        analyzed += 1
+                    db.commit()
+                except Exception as e:
+                    db.rollback()
+                    failed += 1
+                    log.exception("重刷失败 message_pk=%s: %s", row.id, e)
+                if done % 20 == 0 or done == total:
+                    log.info("  进度 %d/%d（已分析 %d，失败 %d）", done, total, analyzed, failed)
+
+            offset += batch_size
+
         log.info("✅ 全量重刷完成：共 %d 封，重新分析 %d 封，跳过(过滤) %d 封，失败 %d 封。",
                  total, analyzed, total - analyzed - failed, failed)
     finally:

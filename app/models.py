@@ -41,6 +41,8 @@ class GmailMessage(Base):
     __table_args__ = (
         UniqueConstraint("account_id", "message_id", name="uq_account_message"),
         Index("ix_received_at", "received_at"),
+        Index("ix_account_id", "account_id"),
+        Index("ix_account_received", "account_id", "received_at"),
     )
 
 

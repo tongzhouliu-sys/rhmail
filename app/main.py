@@ -1,4 +1,5 @@
 import logging
+import time
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Depends, Request, Form, Query, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, FileResponse
@@ -50,7 +51,14 @@ def get_category_slug(cat_name: str) -> str:
 templates.env.filters["cat_slug"] = get_category_slug
 
 
+_sidebar_cache: dict = {"data": None, "ts": 0.0}
+_SIDEBAR_TTL = 300  # 5 minutes
+
+
 def get_sidebar_context(db):
+    now = time.monotonic()
+    if _sidebar_cache["data"] is not None and now - _sidebar_cache["ts"] < _SIDEBAR_TTL:
+        return _sidebar_cache["data"]
     by_cat = dict(
         db.execute(
             select(AnalysisResult.category, func.count()).group_by(AnalysisResult.category)
@@ -59,11 +67,14 @@ def get_sidebar_context(db):
     important_count = db.scalar(
         select(func.count(AnalysisResult.id)).where(AnalysisResult.importance >= 4)
     ) or 0
-    return {
+    result = {
         "categories": CATEGORIES_LIST,
         "by_cat": by_cat,
         "important_count": important_count,
     }
+    _sidebar_cache["data"] = result
+    _sidebar_cache["ts"] = now
+    return result
 
 
 scheduler = AsyncIOScheduler(timezone=settings.timezone)
@@ -141,20 +152,13 @@ async def logout():
 async def dashboard(request: Request):
     db = SessionLocal()
     try:
-        total = db.scalar(select(func.count(AnalysisResult.id))) or 0
-        important = db.scalar(
-            select(func.count(AnalysisResult.id)).where(AnalysisResult.importance >= 4)
-        ) or 0
         digests = db.scalars(
             select(DailyDigest).order_by(DailyDigest.date.desc()).limit(14)
         ).all()
-        ctx = {
-            "request": request,
-            "total": total,
-            "important": important,
-            "digests": digests,
-        }
+        ctx = {"request": request, "digests": digests}
         ctx.update(get_sidebar_context(db))
+        ctx["total"] = sum(ctx["by_cat"].values())
+        ctx["important"] = ctx["important_count"]
         return templates.TemplateResponse("dashboard.html", ctx)
     finally:
         db.close()

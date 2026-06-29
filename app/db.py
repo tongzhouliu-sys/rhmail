@@ -82,6 +82,30 @@ def _sql_literal(value: object) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
 
+def _ensure_indexes() -> None:
+    """Idempotently create ORM-defined indexes missing from existing tables.
+
+    ``create_all`` only creates missing tables; it never adds new indexes to
+    tables that already exist. This reconciles existing databases with the
+    current model definitions. Works on both SQLite and PostgreSQL.
+    """
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+
+    for table in Base.metadata.tables.values():
+        if table.name not in existing_tables:
+            continue
+        existing_idx = {idx["name"] for idx in inspector.get_indexes(table.name)}
+        for index in table.indexes:
+            if index.name and index.name not in existing_idx:
+                try:
+                    index.create(engine)
+                    log.info("Schema migration: created index %s on %s", index.name, table.name)
+                except Exception:
+                    log.exception("Schema migration: failed to create index %s", index.name)
+
+
 def init_db() -> None:
     Base.metadata.create_all(engine)
     _ensure_columns()
+    _ensure_indexes()
