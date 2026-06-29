@@ -269,31 +269,22 @@ a:hover {
 .theme-picker-btn {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
   background: var(--surface2);
   border: 1px solid var(--border);
-  color: var(--text-main);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 0.45rem 0.9rem;
-  border-radius: var(--radius-full);
+  color: var(--text-muted);
+  border-radius: 50%;
   cursor: pointer;
   transition: var(--transition);
-  font-family: var(--font-sans);
 }
 
-.theme-picker-btn:hover {
+.theme-picker-btn:hover,
+.theme-picker.open .theme-picker-btn {
   background: var(--surface-hover);
   border-color: var(--border-hover);
-}
-
-.theme-picker-btn .chevron-icon {
-  transition: transform 0.2s ease;
-  color: var(--text-muted);
-}
-
-.theme-picker.open .chevron-icon {
-  transform: rotate(180deg);
+  color: var(--text-main);
 }
 
 .theme-menu {
@@ -576,7 +567,7 @@ h2::before {
 
 .stat-card.highlight {
   border-color: rgba(249, 115, 22, 0.3);
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, rgba(20, 26, 40, 0.65) 100%);
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.08) 0%, var(--surface) 100%);
 }
 .stat-card.highlight .stat-icon {
   color: var(--imp4);
@@ -707,7 +698,7 @@ h2::before {
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.8;
-  color: #cbd5e1;
+  color: var(--text-main);
 }
 
 /* ---- Clickable Dashboard Cards ---- */
@@ -783,9 +774,9 @@ h2::before {
 }
 
 .sidebar-item.active {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(139, 92, 246, 0.1) 100%);
+  background: var(--accent-grad-glow);
   color: var(--primary);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid var(--primary);
   font-weight: 700;
 }
 
@@ -820,7 +811,7 @@ h2::before {
 
 .filters select,
 .filters input[type="date"] {
-  background: rgba(15, 21, 33, 0.8);
+  background: var(--surface-solid);
   border: 1px solid var(--border);
   color: var(--text-main);
   border-radius: var(--radius-sm);
@@ -1035,18 +1026,18 @@ h2::before {
 }
 
 .detail-oneline {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(139, 92, 246, 0.06) 100%);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: var(--accent-grad-glow);
+  border: 1px solid var(--border-hover);
   border-radius: var(--radius-md);
   padding: 1.25rem 1.5rem;
   margin-bottom: 1.25rem;
-  color: #e2e8f0;
+  color: var(--text-main);
   font-size: 14px;
   line-height: 1.6;
 }
 
 .detail-summary {
-  background: linear-gradient(135deg, rgba(249, 115, 22, 0.12) 0%, rgba(20, 26, 40, 0.6) 100%);
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.12) 0%, var(--surface-solid) 100%);
   border: 1px solid rgba(249, 115, 22, 0.35);
   border-radius: var(--radius-md);
   padding: 1.25rem 1.5rem;
@@ -1056,7 +1047,7 @@ h2::before {
 }
 .detail-summary p, .summary-content {
   margin-top: 0.5rem;
-  color: #e2e8f0;
+  color: var(--text-main);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -1070,8 +1061,8 @@ h2::before {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   font-size: 14px;
   line-height: 1.85;
-  color: #e2e8f0;
-  background: rgba(10, 14, 23, 0.6);
+  color: var(--text-main);
+  background: var(--surface-solid);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 1.75rem;
@@ -1088,7 +1079,7 @@ h2::before {
   justify-content: center;
   min-height: 100vh;
   background: var(--bg-base);
-  background-image: radial-gradient(circle at 50% 30%, #1e1b4b 0%, #090d16 70%);
+  background-image: var(--bg-radial);
 }
 
 .login-card {
@@ -1130,7 +1121,7 @@ h2::before {
 
 .login-card input[type="password"] {
   width: 100%;
-  background: rgba(15, 21, 33, 0.8);
+  background: var(--surface-solid);
   border: 1px solid var(--border);
   color: var(--text-main);
   border-radius: var(--radius-sm);
