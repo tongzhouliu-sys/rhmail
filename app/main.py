@@ -143,6 +143,14 @@ async def emails_page(
         rows = db.execute(
             q.order_by(GmailMessage.received_at.desc()).limit(limit).offset((page - 1) * limit)
         ).all()
+        by_cat = dict(
+            db.execute(
+                select(AnalysisResult.category, func.count()).group_by(AnalysisResult.category)
+            ).all()
+        )
+        important_count = db.scalar(
+            select(func.count(AnalysisResult.id)).where(AnalysisResult.importance >= 4)
+        ) or 0
         return templates.TemplateResponse("emails.html", {
             "request": request,
             "rows": rows,
@@ -150,6 +158,8 @@ async def emails_page(
             "page": page,
             "pages": max(1, -(-total // limit)),
             "categories": CATEGORIES,
+            "by_cat": by_cat,
+            "important_count": important_count,
             "f": {
                 "category": category,
                 "importance": importance,
@@ -159,6 +169,7 @@ async def emails_page(
         })
     finally:
         db.close()
+
 
 
 @app.get("/emails/{pk}", response_class=HTMLResponse, dependencies=[Depends(require_page)])

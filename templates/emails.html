@@ -2,78 +2,120 @@
 {% block title %}邮件列表 — RHMail AI 智能分析{% endblock %}
 {% block body %}
 
-<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
-  <h1 class="page-title" style="margin-bottom:0;">邮件数据分析</h1>
-  <span class="cat-badge" style="font-size:13px; padding:4px 12px; background:rgba(99,102,241,0.1); color:var(--primary); border-color:rgba(99,102,241,0.2);">共 {{ total }} 封邮件</span>
-</div>
+<div class="gmail-layout">
+  <!-- 左侧 Gmail 风格类别导航侧边栏 -->
+  <aside class="gmail-sidebar">
+    <div class="sidebar-section-title">常用视图</div>
 
-<form class="filters" method="get" action="/emails">
-  <select name="category">
-    <option value="">全部分类</option>
-    {% for c in categories %}
-    <option value="{{ c }}" {% if f.category == c %}selected{% endif %}>{{ c }}</option>
-    {% endfor %}
-  </select>
-
-  <select name="importance">
-    <option value="0">全部重要度</option>
-    {% for i in [5, 4, 3, 2, 1] %}
-    <option value="{{ i }}" {% if f.importance == i %}selected{% endif %}>Level {{ i }} {% if i>=4 %}★ 重点{% endif %}</option>
-    {% endfor %}
-  </select>
-
-  <input type="date" name="date_from" value="{{ f.date_from }}" placeholder="起始日期">
-  <span class="filter-sep">至</span>
-  <input type="date" name="date_to" value="{{ f.date_to }}" placeholder="结束日期">
-
-  <button type="submit">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle; margin-right:4px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-    筛选
-  </button>
-  <a href="/emails" class="btn-reset">重置条件</a>
-</form>
-
-<ul class="email-list">
-  {% for m, a in rows %}
-  <li class="email-item">
-    <a href="/emails/{{ m.id }}">
-      <div class="email-row1">
-        <span class="email-subject">{{ a.one_line or m.subject }}</span>
-        <span class="imp imp{{ a.importance }}">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-          {{ a.importance }}
-        </span>
-      </div>
-      <div class="email-row2">
-        <span class="cat-badge">{{ a.category }}</span>
-        <span class="email-from" title="{{ m.from_email }}">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-right:3px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-          {{ m.from_name or m.from_email }}
-        </span>
-        <span class="email-time">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-right:3px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-          {{ m.received_at.strftime('%Y-%m-%d %H:%M') if m.received_at else '' }}
-        </span>
+    <a href="/emails" class="sidebar-item {% if not f.category and not f.importance %}active{% endif %}">
+      <div class="sidebar-item-label">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+        全部收件箱
       </div>
     </a>
-  </li>
-  {% else %}
-  <li style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:3rem 0; text-align:center;">
-    <p class="muted">没有找到符合条件的邮件记录</p>
-  </li>
-  {% endfor %}
-</ul>
+    <a href="/emails?importance=4" class="sidebar-item {% if f.importance >= 4 %}active{% endif %}">
+      <div class="sidebar-item-label" style="color: var(--imp4);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        重点关注 (Level ≥4)
+      </div>
+      {% if important_count %}
+      <span class="sidebar-count" style="background: rgba(249,115,22,0.15); color: var(--imp4);">{{ important_count }}</span>
+      {% endif %}
+    </a>
 
-{% if pages > 1 %}
-<nav class="pager">
-  {% if page > 1 %}
-  <a href="?category={{ f.category }}&importance={{ f.importance }}&date_from={{ f.date_from }}&date_to={{ f.date_to }}&page={{ page - 1 }}">&larr; 上一页</a>
-  {% endif %}
-  <span>第 {{ page }} / {{ pages }} 页</span>
-  {% if page < pages %}
-  <a href="?category={{ f.category }}&importance={{ f.importance }}&date_from={{ f.date_from }}&date_to={{ f.date_to }}&page={{ page + 1 }}">下一页 &rarr;</a>
-  {% endif %}
-</nav>
-{% endif %}
+    <div class="sidebar-section-title" style="margin-top: 1.5rem;">邮件分类 Label</div>
+    {% for c in categories %}
+    {% set cnt = by_cat.get(c, 0) %}
+    <a href="/emails?category={{ c|urlencode }}" class="sidebar-item {% if f.category == c %}active{% endif %}">
+      <div class="sidebar-item-label">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle></svg>
+        {{ c }}
+      </div>
+      {% if cnt %}
+      <span class="sidebar-count">{{ cnt }}</span>
+      {% endif %}
+    </a>
+    {% endfor %}
+  </aside>
+
+  <!-- 右侧邮件列表与筛选区 -->
+  <main class="gmail-content">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem;">
+      <h1 class="page-title" style="margin-bottom:0; font-size: 20px;">
+        {% if f.category %}
+          分类：{{ f.category }}
+        {% elif f.importance >= 4 %}
+          重点关注邮件列表
+        {% else %}
+          收件箱邮件列表
+        {% endif %}
+      </h1>
+      <span class="cat-badge" style="font-size:13px; padding:4px 12px; background:rgba(99,102,241,0.1); color:var(--primary); border-color:rgba(99,102,241,0.2);">共 {{ total }} 封邮件</span>
+    </div>
+
+    <form class="filters" method="get" action="/emails">
+      <input type="hidden" name="category" value="{{ f.category }}">
+      <select name="importance">
+        <option value="0">全部重要度</option>
+        {% for i in [5, 4, 3, 2, 1] %}
+        <option value="{{ i }}" {% if f.importance == i %}selected{% endif %}>Level {{ i }} {% if i>=4 %}★ 重点{% endif %}</option>
+        {% endfor %}
+      </select>
+
+      <input type="date" name="date_from" value="{{ f.date_from }}" placeholder="起始日期">
+      <span class="filter-sep">至</span>
+      <input type="date" name="date_to" value="{{ f.date_to }}" placeholder="结束日期">
+
+      <button type="submit">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle; margin-right:4px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        筛选
+      </button>
+      <a href="/emails" class="btn-reset">重置条件</a>
+    </form>
+
+    <ul class="email-list">
+      {% for m, a in rows %}
+      <li class="email-item">
+        <a href="/emails/{{ m.id }}">
+          <div class="email-row1">
+            <span class="email-subject">{{ a.one_line or m.subject }}</span>
+            <span class="imp imp{{ a.importance }}">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+              {{ a.importance }}
+            </span>
+          </div>
+          <div class="email-row2">
+            <span class="cat-badge">{{ a.category }}</span>
+            <span class="email-from" title="{{ m.from_email }}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-right:3px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              {{ m.from_name or m.from_email }}
+            </span>
+            <span class="email-time">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-right:3px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              {{ m.received_at.strftime('%Y-%m-%d %H:%M') if m.received_at else '' }}
+            </span>
+          </div>
+        </a>
+      </li>
+      {% else %}
+      <li style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:3rem 0; text-align:center;">
+        <p class="muted">没有找到符合条件的邮件记录</p>
+      </li>
+      {% endfor %}
+    </ul>
+
+    {% if pages > 1 %}
+    <nav class="pager">
+      {% if page > 1 %}
+      <a href="?category={{ f.category }}&importance={{ f.importance }}&date_from={{ f.date_from }}&date_to={{ f.date_to }}&page={{ page - 1 }}">&larr; 上一页</a>
+      {% endif %}
+      <span>第 {{ page }} / {{ pages }} 页</span>
+      {% if page < pages %}
+      <a href="?category={{ f.category }}&importance={{ f.importance }}&date_from={{ f.date_from }}&date_to={{ f.date_to }}&page={{ page + 1 }}">下一页 &rarr;</a>
+      {% endif %}
+    </nav>
+    {% endif %}
+  </main>
+</div>
 
 {% endblock %}
