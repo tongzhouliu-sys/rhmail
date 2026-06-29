@@ -138,6 +138,71 @@ async def reanalyze_unanalyzed_messages() -> None:
         db.close()
 
 
+async def reanalyze_all_messages() -> None:
+    """Full refresh: re-run AI analysis on EVERY non-filtered message and
+    overwrite its existing AnalysisResult, regenerating summaries in the new
+    structured-block format. Per-message error isolation + progress logging."""
+    db = SessionLocal()
+    try:
+        rows = db.scalars(select(GmailMessage)).all()
+        total = len(rows)
+        log.info("🔁 全量重刷：库内共 %d 封邮件，开始逐封重新分析...", total)
+        done = analyzed = failed = 0
+        for row in rows:
+            done += 1
+            try:
+                filtered = prefilter.should_filter_out({
+                    "from_email": row.from_email,
+                    "subject": row.subject,
+                })
+                row.is_filtered = filtered
+                if not filtered:
+                    res = await analyzer.analyze({
+                        "from_email": row.from_email,
+                        "subject": row.subject,
+                        "body_text": row.body_text,
+                    })
+                    # Safety: if the LLM call failed, do NOT overwrite a good
+                    # existing summary with the failure placeholder.
+                    if str(res.get("summary", "")).startswith("(分析失败"):
+                        failed += 1
+                        log.warning("分析失败，保留原摘要 message_pk=%s", row.id)
+                        db.commit()
+                        if done % 20 == 0 or done == total:
+                            log.info("  进度 %d/%d（已分析 %d，失败 %d）", done, total, analyzed, failed)
+                        continue
+                    existing = db.scalar(
+                        select(AnalysisResult).where(AnalysisResult.message_pk == row.id)
+                    )
+                    if existing:
+                        existing.category = res["category"]
+                        existing.importance = res["importance"]
+                        existing.one_line = res["one_line"]
+                        existing.summary = res["summary"]
+                        existing.model_used = res["model_used"]
+                    else:
+                        db.add(AnalysisResult(
+                            message_pk=row.id,
+                            category=res["category"],
+                            importance=res["importance"],
+                            one_line=res["one_line"],
+                            summary=res["summary"],
+                            model_used=res["model_used"],
+                        ))
+                    analyzed += 1
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                failed += 1
+                log.exception("重刷失败 message_pk=%s: %s", row.id, e)
+            if done % 20 == 0 or done == total:
+                log.info("  进度 %d/%d（已分析 %d，失败 %d）", done, total, analyzed, failed)
+        log.info("✅ 全量重刷完成：共 %d 封，重新分析 %d 封，跳过(过滤) %d 封，失败 %d 封。",
+                 total, analyzed, total - analyzed - failed, failed)
+    finally:
+        db.close()
+
+
 async def run_daily_digest() -> None:
     db = SessionLocal()
     try:
@@ -194,6 +259,10 @@ if __name__ == "__main__":
         log.info("🚀 启动数据库存量邮件补全分析任务 (reanalyze)...")
         asyncio.run(reanalyze_unanalyzed_messages())
         log.info("✅ 存量邮件补全分析完成。")
+    elif cmd in ("reanalyze-all", "refresh"):
+        log.info("🚀 启动全量重刷任务 (reanalyze-all)...")
+        asyncio.run(reanalyze_all_messages())
+        log.info("✅ 全量重刷完成。")
     elif cmd in ("all", "sync"):
         log.info("🚀 启动全量任务 (fetch + digest)...")
         asyncio.run(fetch_and_analyze())
@@ -201,6 +270,6 @@ if __name__ == "__main__":
         asyncio.run(run_daily_digest())
         log.info("✅ 全量任务完成并退出。")
     else:
-        print("Usage: python -m app.jobs [fetch|digest|reanalyze|all|sync]", file=sys.stderr)
+        print("Usage: python -m app.jobs [fetch|digest|reanalyze|reanalyze-all|all|sync]", file=sys.stderr)
         sys.exit(1)
 

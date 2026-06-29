@@ -176,7 +176,7 @@ sequenceDiagram
 │   ├── cleaner.py                  # [核心] HTML 转文本、引用/签名剥离与正文截断
 │   ├── analyzer.py                 # [核心] LLM API 调用与 JSON 格式解析
 │   ├── digest.py                   # [核心] Markdown 邮件日报渲染引擎
-│   ├── jobs.py                     # [核心] 任务执行引擎与 CLI 独立脚本入口 (python -m app.jobs fetch|digest)
+│   ├── jobs.py                     # [核心] 任务执行引擎与 CLI 独立脚本入口 (python -m app.jobs fetch|digest|reanalyze|reanalyze-all)
 │   └── main.py                     # [核心] FastAPI 应用入口、路由与 HTML 模板渲染
 ├── scripts/                        # [辅助/工具] 运维与辅助脚本
 │   ├── __init__.py                 # 包初始化文件

@@ -5,7 +5,7 @@
 <div class="dashboard-hero">
   <div class="hero-text">
     <h1>邮箱管理</h1>
-    <p>添加、管理和监控您的 Gmail 邮箱授权与同步状态</p>
+    <p>管理和监控您的 Gmail 邮箱授权、自动同步状态与数据连接</p>
   </div>
   <div class="hero-actions">
     <a href="/accounts/add" class="btn btn-primary" id="btn-add-gmail">
@@ -26,29 +26,71 @@
 {% endif %}
 
 {% if accounts %}
+{% set total_count = accounts | length %}
+{% set active_count = accounts | selectattr('is_active') | list | length %}
+{% set reauth_count = accounts | selectattr('needs_reauth') | list | length %}
+
+<!-- 全局统计概览栏 -->
+<div class="accounts-stats-grid">
+  <div class="accounts-stat-card">
+    <div class="accounts-stat-icon accounts-stat-icon--blue">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+    </div>
+    <div class="accounts-stat-info">
+      <div class="accounts-stat-label">已绑邮箱总数</div>
+      <div class="accounts-stat-value">{{ total_count }} <span class="accounts-stat-unit">个</span></div>
+    </div>
+  </div>
+
+  <div class="accounts-stat-card">
+    <div class="accounts-stat-icon accounts-stat-icon--green">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+    </div>
+    <div class="accounts-stat-info">
+      <div class="accounts-stat-label">正常同步中</div>
+      <div class="accounts-stat-value text-success">{{ active_count }} <span class="accounts-stat-unit">个</span></div>
+    </div>
+  </div>
+
+  <div class="accounts-stat-card">
+    <div class="accounts-stat-icon accounts-stat-icon--orange">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+    </div>
+    <div class="accounts-stat-info">
+      <div class="accounts-stat-label">需重新授权</div>
+      <div class="accounts-stat-value {% if reauth_count > 0 %}text-warning{% endif %}">{{ reauth_count }} <span class="accounts-stat-unit">个</span></div>
+    </div>
+  </div>
+</div>
+
 <div class="accounts-grid">
   {% for acc in accounts %}
   <div class="account-card {% if acc.needs_reauth %}account-card--warning{% endif %}" id="account-card-{{ acc.id }}">
     <div class="account-card-header">
       <div class="account-avatar">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
       </div>
       <div class="account-info">
-        <div class="account-email">{{ acc.email }}</div>
+        <div class="account-email-row">
+          <span class="account-email" title="{{ acc.email }}">{{ acc.email }}</span>
+          <button class="copy-email-btn" onclick="copyEmail('{{ acc.email }}', this)" title="复制邮箱地址">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+          </button>
+        </div>
         <div class="account-meta">
           {% if acc.needs_reauth %}
-            <span class="status-badge status-badge--danger">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <span class="status-badge status-badge--danger pulse">
+              <span class="badge-dot"></span>
               需重新授权
             </span>
           {% elif acc.is_active %}
-            <span class="status-badge status-badge--success">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <span class="status-badge status-badge--success pulse">
+              <span class="badge-dot"></span>
               授权正常
             </span>
           {% else %}
             <span class="status-badge status-badge--muted">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+              <span class="badge-dot"></span>
               已暂停
             </span>
           {% endif %}
@@ -56,10 +98,10 @@
           <span class="account-source">
             {% if acc.added_via == "env" %}
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-              环境变量导入
+              环境变量
             {% else %}
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
-              Web 授权
+              OAuth 授权
             {% endif %}
           </span>
         </div>
@@ -67,31 +109,33 @@
     </div>
 
     <div class="account-card-body">
-      <div class="account-detail-row">
-        <span class="account-detail-label">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-          最后同步
-        </span>
-        <span class="account-detail-value">
-          {% if acc.last_sync_at %}
-            {{ acc.last_sync_at.strftime('%Y-%m-%d %H:%M') }} UTC
-          {% else %}
-            <span class="muted">尚未同步</span>
-          {% endif %}
-        </span>
-      </div>
-      <div class="account-detail-row">
-        <span class="account-detail-label">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-          添加时间
-        </span>
-        <span class="account-detail-value">
-          {% if acc.created_at %}
-            {{ acc.created_at.strftime('%Y-%m-%d %H:%M') }}
-          {% else %}
-            <span class="muted">未知时间</span>
-          {% endif %}
-        </span>
+      <div class="account-details-grid">
+        <div class="account-detail-item">
+          <span class="account-detail-label">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            最后同步
+          </span>
+          <span class="account-detail-value">
+            {% if acc.last_sync_at %}
+              {{ acc.last_sync_at.strftime('%m-%d %H:%M') }}
+            {% else %}
+              <span class="muted">尚未同步</span>
+            {% endif %}
+          </span>
+        </div>
+        <div class="account-detail-item">
+          <span class="account-detail-label">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            添加时间
+          </span>
+          <span class="account-detail-value">
+            {% if acc.created_at %}
+              {{ acc.created_at.strftime('%Y-%m-%d') }}
+            {% else %}
+              <span class="muted">未知</span>
+            {% endif %}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -110,7 +154,7 @@
           重新授权
         </a>
         {% endif %}
-        <button onclick="deleteAccount({{ acc.id }}, '{{ acc.email }}')" class="btn btn-sm btn-danger" title="删除此邮箱及所有关联数据">
+        <button onclick="deleteAccount({{ acc.id }}, '{{ acc.email }}')" class="btn btn-sm btn-ghost-danger" title="删除此邮箱及所有关联数据">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           删除
         </button>
@@ -130,6 +174,18 @@
 {% endif %}
 
 <script>
+function copyEmail(email, btn) {
+  navigator.clipboard.writeText(email).then(() => {
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+    btn.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+    setTimeout(() => {
+      btn.innerHTML = originalHTML;
+      btn.style.borderColor = '';
+    }, 1500);
+  });
+}
+
 async function toggleAccount(id, checkbox) {
   try {
     const resp = await fetch(`/api/accounts/${id}/toggle`, { method: 'POST' });
@@ -152,7 +208,10 @@ async function deleteAccount(id, email) {
     if (card) {
       card.style.opacity = '0';
       card.style.transform = 'scale(0.95)';
-      setTimeout(() => card.remove(), 300);
+      setTimeout(() => {
+        card.remove();
+        location.reload();
+      }, 300);
     }
   } catch (e) {
     alert('删除失败，请刷新页面重试');
