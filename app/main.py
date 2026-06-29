@@ -1,4 +1,5 @@
 import logging
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Depends, Request, Form, Query, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -9,23 +10,51 @@ from app.config import settings
 from app.db import SessionLocal, init_db
 from app.models import GmailMessage, AnalysisResult, DailyDigest
 from app.auth import make_cookie, require_page, require_api, COOKIE_NAME, _valid
+from app.jobs import fetch_and_analyze, run_daily_digest
 
 logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("main")
+
 app = FastAPI(title="Gmail AI Analyzer", version="1.0")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 CATEGORIES = ["紧急·需回复", "金融·账户告警", "法律·合同", "重要通知", "订阅·营销", "社交其他"]
 
+scheduler = AsyncIOScheduler(timezone=settings.timezone)
+
 
 @app.on_event("startup")
 async def _startup():
     init_db()
+    scheduler.add_job(
+        fetch_and_analyze,
+        "interval",
+        minutes=settings.fetch_interval_minutes,
+        id="fetch_emails_job",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        run_daily_digest,
+        "cron",
+        hour=settings.digest_hour,
+        minute=0,
+        id="daily_digest_job",
+        replace_existing=True,
+    )
+    scheduler.start()
+    log.info("⏰ APScheduler 内置定时任务已启动：每 %d 分钟同步邮件，每天 %d:00 生成日报", settings.fetch_interval_minutes, settings.digest_hour)
+
+
+@app.on_event("shutdown")
+async def _shutdown():
+    scheduler.shutdown()
 
 
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
 
 
 # ---------- 认证 ----------

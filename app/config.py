@@ -50,7 +50,8 @@ class Settings:
     secret_key: str = field(default_factory=lambda: os.environ.get("SECRET_KEY", ""))
     session_lifetime_days: int = field(default_factory=lambda: int(os.environ.get("SESSION_LIFETIME_DAYS", "7")))
 
-    fetch_interval_minutes: int = field(default_factory=lambda: int(os.environ.get("FETCH_INTERVAL_MINUTES", "5")))
+    fetch_interval_minutes: int = field(default_factory=lambda: int(os.environ.get("FETCH_INTERVAL_MINUTES", "30")))
+
     digest_hour: int = field(default_factory=lambda: int(os.environ.get("DIGEST_HOUR", "8")))
     timezone: str = field(default_factory=lambda: os.environ.get("TZ", "Asia/Singapore"))
     backfill_days: int = field(default_factory=lambda: int(os.environ.get("BACKFILL_DAYS", "2")))
