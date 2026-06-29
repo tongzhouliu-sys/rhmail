@@ -124,22 +124,17 @@ async def dashboard(request: Request):
         important = db.scalar(
             select(func.count(AnalysisResult.id)).where(AnalysisResult.importance >= 4)
         ) or 0
-        by_cat = dict(
-            db.execute(
-                select(AnalysisResult.category, func.count()).group_by(AnalysisResult.category)
-            ).all()
-        )
         digests = db.scalars(
             select(DailyDigest).order_by(DailyDigest.date.desc()).limit(14)
         ).all()
-        return templates.TemplateResponse("dashboard.html", {
+        ctx = {
             "request": request,
             "total": total,
             "important": important,
-            "by_cat": by_cat,
-            "categories": CATEGORIES_LIST,
             "digests": digests,
-        })
+        }
+        ctx.update(get_sidebar_context(db))
+        return templates.TemplateResponse("dashboard.html", ctx)
     finally:
         db.close()
 
@@ -175,23 +170,12 @@ async def emails_page(
         rows = db.execute(
             q.order_by(GmailMessage.received_at.desc()).limit(limit).offset((page - 1) * limit)
         ).all()
-        by_cat = dict(
-            db.execute(
-                select(AnalysisResult.category, func.count()).group_by(AnalysisResult.category)
-            ).all()
-        )
-        important_count = db.scalar(
-            select(func.count(AnalysisResult.id)).where(AnalysisResult.importance >= 4)
-        ) or 0
-        return templates.TemplateResponse("emails.html", {
+        ctx = {
             "request": request,
             "rows": rows,
             "total": total,
             "page": page,
             "pages": max(1, -(-total // limit)),
-            "categories": CATEGORIES_LIST,
-            "by_cat": by_cat,
-            "important_count": important_count,
             "f": {
                 "category": cat_slug,
                 "category_name": cat_name,
@@ -199,7 +183,9 @@ async def emails_page(
                 "date_from": date_from,
                 "date_to": date_to,
             },
-        })
+        }
+        ctx.update(get_sidebar_context(db))
+        return templates.TemplateResponse("emails.html", ctx)
     finally:
         db.close()
 
@@ -217,22 +203,13 @@ async def email_detail(request: Request, pk: int):
         if not row:
             raise HTTPException(404)
         m, a = row
-        by_cat = dict(
-            db.execute(
-                select(AnalysisResult.category, func.count()).group_by(AnalysisResult.category)
-            ).all()
-        )
-        important_count = db.scalar(
-            select(func.count(AnalysisResult.id)).where(AnalysisResult.importance >= 4)
-        ) or 0
-        return templates.TemplateResponse("email_detail.html", {
+        ctx = {
             "request": request,
             "m": m,
             "a": a,
-            "categories": CATEGORIES_LIST,
-            "by_cat": by_cat,
-            "important_count": important_count,
-        })
+        }
+        ctx.update(get_sidebar_context(db))
+        return templates.TemplateResponse("email_detail.html", ctx)
     finally:
         db.close()
 
@@ -244,7 +221,9 @@ async def digests_page(request: Request):
         items = db.scalars(
             select(DailyDigest).order_by(DailyDigest.date.desc()).limit(90)
         ).all()
-        return templates.TemplateResponse("digests.html", {"request": request, "items": items})
+        ctx = {"request": request, "items": items}
+        ctx.update(get_sidebar_context(db))
+        return templates.TemplateResponse("digests.html", ctx)
     finally:
         db.close()
 
@@ -256,11 +235,13 @@ async def digest_detail(request: Request, day: str):
         items = db.scalars(
             select(DailyDigest).where(DailyDigest.date == day)
         ).all()
-        return templates.TemplateResponse("digest_detail.html", {
+        ctx = {
             "request": request,
             "day": day,
             "items": items,
-        })
+        }
+        ctx.update(get_sidebar_context(db))
+        return templates.TemplateResponse("digest_detail.html", ctx)
     finally:
         db.close()
 
@@ -303,7 +284,6 @@ async def api_emails(
         db.close()
 
 
-# ---------- 邮箱管理 ----------
 @app.get("/accounts", response_class=HTMLResponse, dependencies=[Depends(require_page)])
 async def accounts_page(request: Request, msg: str = Query("")):
     db = SessionLocal()
@@ -311,11 +291,13 @@ async def accounts_page(request: Request, msg: str = Query("")):
         accounts = db.scalars(
             select(GmailAccount).order_by(GmailAccount.created_at.desc())
         ).all()
-        return templates.TemplateResponse("accounts.html", {
+        ctx = {
             "request": request,
             "accounts": accounts,
             "msg": msg,
-        })
+        }
+        ctx.update(get_sidebar_context(db))
+        return templates.TemplateResponse("accounts.html", ctx)
     finally:
         db.close()
 

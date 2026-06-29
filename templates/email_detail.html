@@ -2,68 +2,60 @@
 {% block title %}{{ m.subject }} — 邮件详情{% endblock %}
 {% block body %}
 
-<div class="gmail-layout">
-  <!-- 左侧 Gmail 风格类别导航侧边栏 -->
-  {% include "sidebar.html" %}
+<a href="/emails" class="back-link">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+  返回邮件列表
+</a>
 
-  <!-- 右侧邮件详情卡片 -->
-  <main class="gmail-content">
-    <a href="/emails" class="back-link">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-      返回邮件列表
-    </a>
+<article class="detail-card">
+  <h1 class="detail-title">{{ m.subject }}</h1>
+  
+  <div class="detail-meta">
+    <span>
+      <strong style="color:var(--text-main);">发件人：</strong>
+      {{ m.from_name }} &lt;{{ m.from_email }}&gt;
+    </span>
+    <span>
+      <strong style="color:var(--text-main);">接收时间：</strong>
+      {{ m.received_at.strftime('%Y-%m-%d %H:%M') if m.received_at else '' }}
+    </span>
+  </div>
 
-    <article class="detail-card">
-      <h1 class="detail-title">{{ m.subject }}</h1>
-      
-      <div class="detail-meta">
-        <span>
-          <strong style="color:var(--text-main);">发件人：</strong>
-          {{ m.from_name }} &lt;{{ m.from_email }}&gt;
-        </span>
-        <span>
-          <strong style="color:var(--text-main);">接收时间：</strong>
-          {{ m.received_at.strftime('%Y-%m-%d %H:%M') if m.received_at else '' }}
-        </span>
-      </div>
+  <div class="detail-badges">
+    <span class="cat-badge" style="font-size:12px; padding:3px 12px;">{{ a.category }}</span>
+    <span class="imp imp{{ a.importance }}" style="font-size:12px; padding:3px 12px;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+      重要度 Level {{ a.importance }}
+    </span>
+  </div>
 
-      <div class="detail-badges">
-        <span class="cat-badge" style="font-size:12px; padding:3px 12px;">{{ a.category }}</span>
-        <span class="imp imp{{ a.importance }}" style="font-size:12px; padding:3px 12px;">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-          重要度 Level {{ a.importance }}
-        </span>
-      </div>
+  {% if a.one_line %}
+  <div class="detail-oneline">
+    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem; color:var(--primary); font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:0.05em;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+      AI 核心提炼
+    </div>
+    {{ a.one_line }}
+  </div>
+  {% endif %}
 
-      {% if a.one_line %}
-      <div class="detail-oneline">
-        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem; color:var(--primary); font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:0.05em;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-          AI 核心提炼
-        </div>
-        {{ a.one_line }}
-      </div>
-      {% endif %}
+  {% if a.summary %}
+  <div class="detail-summary">
+    <div style="display:flex; align-items:center; gap:0.5rem; color:var(--imp4); font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+      中文内容概要 (AI 翻译与梳理)
+    </div>
+    <div class="summary-content">{{ a.summary }}</div>
+  </div>
+  {% endif %}
 
-      {% if a.summary %}
-      <div class="detail-summary">
-        <div style="display:flex; align-items:center; gap:0.5rem; color:var(--imp4); font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.5rem;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-          中文内容概要 (AI 翻译与梳理)
-        </div>
-        <div class="summary-content">{{ a.summary }}</div>
-      </div>
-      {% endif %}
-
-      <div class="email-body-section">
-        <h2 style="display:flex; align-items:center; gap:0.5rem; font-size:16px; margin-top:1.5rem; margin-bottom:0.75rem; color:var(--text-main);">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-          邮件原文排版
-        </h2>
-        <div class="email-body">{{ m.body_text | clean_text }}</div>
-      </div>
-    </article>
-  </main>
-</div>
+  <div class="email-body-section">
+    <h2 style="display:flex; align-items:center; gap:0.5rem; font-size:16px; margin-top:1.5rem; margin-bottom:0.75rem; color:var(--text-main);">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+      邮件原文排版
+    </h2>
+    <div class="email-body">{{ m.body_text | clean_text }}</div>
+  </div>
+</article>
 
 {% endblock %}

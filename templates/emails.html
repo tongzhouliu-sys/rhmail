@@ -2,88 +2,98 @@
 {% block title %}邮件列表 — RHMail AI 智能分析{% endblock %}
 {% block body %}
 
-<div class="gmail-layout">
-  <!-- 左侧 Gmail 风格类别导航侧边栏 -->
-  {% include "sidebar.html" %}
-
-  <!-- 右侧邮件列表与筛选区 -->
-  <main class="gmail-content">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem;">
-      <h1 class="page-title" style="margin-bottom:0; font-size: 20px;">
-        {% if f.category_name %}
-          分类：{{ f.category_name }}
-        {% elif f.importance >= 4 %}
-          重点关注邮件列表
-        {% else %}
-          收件箱邮件列表
-        {% endif %}
-      </h1>
-      <span class="cat-badge" style="font-size:13px; padding:4px 12px; background:rgba(99,102,241,0.1); color:var(--primary); border-color:rgba(99,102,241,0.2);">共 {{ total }} 封邮件</span>
-    </div>
-
-    <form class="filters" method="get" action="/emails">
-      <input type="hidden" name="category" value="{{ f.category }}">
-      <select name="importance">
-        <option value="0">全部重要度</option>
-        {% for i in [5, 4, 3, 2, 1] %}
-        <option value="{{ i }}" {% if f.importance == i %}selected{% endif %}>Level {{ i }} {% if i>=4 %}★ 重点{% endif %}</option>
-        {% endfor %}
-      </select>
-
-      <input type="date" name="date_from" value="{{ f.date_from }}" placeholder="起始日期">
-      <span class="filter-sep">至</span>
-      <input type="date" name="date_to" value="{{ f.date_to }}" placeholder="结束日期">
-
-      <button type="submit">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle; margin-right:4px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        筛选
-      </button>
-      <a href="/emails" class="btn-reset">重置条件</a>
-    </form>
-
-    <ul class="email-list">
-      {% for m, a in rows %}
-      <li class="email-item">
-        <a href="/emails/{{ m.id }}">
-          <div class="email-row1">
-            <span class="email-subject">{{ a.one_line or m.subject }}</span>
-            <span class="imp imp{{ a.importance }}">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-              {{ a.importance }}
-            </span>
-          </div>
-          <div class="email-row2">
-            <span class="cat-badge">{{ a.category }}</span>
-            <span class="email-from" title="{{ m.from_email }}">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-right:3px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-              {{ m.from_name or m.from_email }}
-            </span>
-            <span class="email-time">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle; margin-right:3px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-              {{ m.received_at.strftime('%Y-%m-%d %H:%M') if m.received_at else '' }}
-            </span>
-          </div>
-        </a>
-      </li>
+<div class="content-header">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem;">
+    <h1 class="page-title" style="margin-bottom:0; font-size: 20px;">
+      {% if f.category_name %}
+        分类：{{ f.category_name }}
+      {% elif f.importance >= 4 %}
+        重点关注邮件列表
       {% else %}
-      <li style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:3rem 0; text-align:center;">
-        <p class="muted">没有找到符合条件的邮件记录</p>
-      </li>
-      {% endfor %}
-    </ul>
+        收件箱邮件列表
+      {% endif %}
+    </h1>
+    <span class="cat-badge" style="font-size:13px; padding:4px 12px; background:rgba(99,102,241,0.1); color:var(--primary); border-color:rgba(99,102,241,0.2);">共 {{ total }} 封邮件</span>
+  </div>
 
-    {% if pages > 1 %}
-    <nav class="pager">
-      {% if page > 1 %}
-      <a href="?category={{ f.category }}&importance={{ f.importance }}&date_from={{ f.date_from }}&date_to={{ f.date_to }}&page={{ page - 1 }}">&larr; 上一页</a>
-      {% endif %}
-      <span>第 {{ page }} / {{ pages }} 页</span>
-      {% if page < pages %}
-      <a href="?category={{ f.category }}&importance={{ f.importance }}&date_from={{ f.date_from }}&date_to={{ f.date_to }}&page={{ page + 1 }}">下一页 &rarr;</a>
-      {% endif %}
-    </nav>
-    {% endif %}
-  </main>
+  <form class="filters" method="get" action="/emails">
+    <input type="hidden" name="category" value="{{ f.category }}">
+    <select name="importance">
+      <option value="0">全部重要度</option>
+      {% for i in [5, 4, 3, 2, 1] %}
+      <option value="{{ i }}" {% if f.importance == i %}selected{% endif %}>Level {{ i }} {% if i>=4 %}★ 重点{% endif %}</option>
+      {% endfor %}
+    </select>
+
+    <input type="date" name="date_from" value="{{ f.date_from }}" placeholder="起始日期">
+    <span class="filter-sep">至</span>
+    <input type="date" name="date_to" value="{{ f.date_to }}" placeholder="结束日期">
+
+    <button type="submit">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle; margin-right:4px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      筛选
+    </button>
+    <a href="/emails" class="btn-reset">重置条件</a>
+  </form>
 </div>
+
+<!-- Gmail 单行横向打满邮件列表 -->
+<div class="gmail-table-container">
+  <ul class="gmail-email-list">
+    {% for m, a in rows %}
+    <li class="gmail-email-row">
+      <a href="/emails/{{ m.id }}" class="gmail-row-link">
+        <!-- 1. 重要度标星图标 -->
+        <div class="row-star">
+          <span class="imp imp{{ a.importance }}" title="重要度 Level {{ a.importance }}">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            {{ a.importance }}
+          </span>
+        </div>
+
+        <!-- 2. 发件人 (固定宽截断) -->
+        <div class="row-sender" title="{{ m.from_name or m.from_email }}">
+          {{ m.from_name or m.from_email }}
+        </div>
+
+        <!-- 3. 主题与 AI 提炼摘要 (弹性充满打满屏幕) -->
+        <div class="row-subject-snippet">
+          <span class="row-subject">{{ m.subject }}</span>
+          {% if a.one_line %}
+          <span class="row-snippet-sep">-</span>
+          <span class="row-snippet">{{ a.one_line }}</span>
+          {% endif %}
+        </div>
+
+        <!-- 4. 分类 Badge -->
+        <div class="row-category">
+          <span class="cat-badge">{{ a.category }}</span>
+        </div>
+
+        <!-- 5. 接收时间 -->
+        <div class="row-time">
+          {{ m.received_at.strftime('%m-%d %H:%M') if m.received_at else '' }}
+        </div>
+      </a>
+    </li>
+    {% else %}
+    <li style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:3rem 0; text-align:center;">
+      <p class="muted">没有找到符合条件的邮件记录</p>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+
+{% if pages > 1 %}
+<nav class="pager">
+  {% if page > 1 %}
+  <a href="?category={{ f.category }}&importance={{ f.importance }}&date_from={{ f.date_from }}&date_to={{ f.date_to }}&page={{ page - 1 }}">&larr; 上一页</a>
+  {% endif %}
+  <span>第 {{ page }} / {{ pages }} 页</span>
+  {% if page < pages %}
+  <a href="?category={{ f.category }}&importance={{ f.importance }}&date_from={{ f.date_from }}&date_to={{ f.date_to }}&page={{ page + 1 }}">下一页 &rarr;</a>
+  {% endif %}
+</nav>
+{% endif %}
 
 {% endblock %}
