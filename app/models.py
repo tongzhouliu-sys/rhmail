@@ -17,6 +17,8 @@ class GmailAccount(Base):
     last_history_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     needs_reauth: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    added_via: Mapped[str] = mapped_column(String(16), default="oauth")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     messages: Mapped[list["GmailMessage"]] = relationship(back_populates="account")

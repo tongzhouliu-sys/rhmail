@@ -58,6 +58,8 @@ class Settings:
     body_max_chars: int = field(default_factory=lambda: int(os.environ.get("BODY_MAX_CHARS", "2000")))
     summary_threshold: int = field(default_factory=lambda: int(os.environ.get("IMPORTANCE_SUMMARY_THRESHOLD", "4")))
 
+    oauth_redirect_uri: str = field(default_factory=lambda: os.environ.get("OAUTH_REDIRECT_URI", ""))
+
     whitelist_from: list[str] = field(default_factory=lambda: [
         s for s in os.environ.get("WHITELIST_FROM", "").split(",") if s
     ])
@@ -70,8 +72,7 @@ class Settings:
         for name in ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "LLM_API_BASE", "LLM_API_KEY", "DASHBOARD_PASSWORD", "SECRET_KEY"]:
             if not getattr(self, name.lower(), None):
                 missing.append(name)
-        if not self.gmail_accounts:
-            missing.append("GMAIL_EMAIL_1 & GMAIL_REFRESH_TOKEN_1")
+        # Gmail accounts are now optional in env vars — can be added via Web OAuth
         if missing:
             log.warning(f"⚠️ 缺少以下环境变量，可能导致功能异常: {', '.join(missing)}")
 

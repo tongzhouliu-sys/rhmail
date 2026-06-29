@@ -16,14 +16,20 @@
 </head>
 <body>
   <header class="topbar">
-    <a href="/" class="brand">
-      <div class="brand-logo">
-        <img src="/static/logo.png" alt="RHCLOUD Logo">
-      </div>
-      <span>RHMail AI</span>
-    </a>
+    <div style="display: flex; align-items: center; gap: 0.75rem;">
+      <button class="topbar-sidebar-toggle" id="topbarSidebarToggle" title="切换侧边栏" aria-label="切换侧边栏">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      </button>
+      <a href="/" class="brand">
+        <div class="brand-logo">
+          <img src="/static/logo.png" alt="RHCLOUD Logo">
+        </div>
+        <span>RHMail AI</span>
+      </a>
+    </div>
+
     <div class="topbar-right" style="display: flex; align-items: center; gap: 0.75rem;">
-      <nav>
+      <nav class="desktop-nav">
         <a href="/" class="nav-link" id="nav-dashboard">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
           概览
@@ -35,6 +41,10 @@
         <a href="/digests" class="nav-link" id="nav-digests">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
           日报
+        </a>
+        <a href="/accounts" class="nav-link" id="nav-accounts">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline><line x1="2" y1="20" x2="10" y2="12"></line><line x1="22" y1="20" x2="14" y2="12"></line></svg>
+          邮箱
         </a>
         <form action="/logout" method="post" style="display:inline">
           <button class="link-btn" title="安全退出">
@@ -82,26 +92,87 @@
       </div>
     </div>
   </header>
+
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
   <main class="container">
     {% block body %}{% endblock %}
   </main>
+
   <footer class="app-footer">
     <div class="footer-content">
       <p>© 2026 <strong>RHCLOUD</strong>. All Rights Reserved. RHMail AI 智能邮件分析看板</p>
     </div>
   </footer>
+
+  <!-- 移动端底部导航栏 -->
+  <nav class="mobile-bottom-nav">
+    <a href="/" class="mobile-nav-item" id="mnav-dashboard">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+      <span>概览</span>
+    </a>
+    <a href="/emails" class="mobile-nav-item" id="mnav-emails">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+      <span>邮件</span>
+    </a>
+    <a href="/digests" class="mobile-nav-item" id="mnav-digests">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+      <span>日报</span>
+    </a>
+    <a href="/accounts" class="mobile-nav-item" id="mnav-accounts">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline><line x1="2" y1="20" x2="10" y2="12"></line><line x1="22" y1="20" x2="14" y2="12"></line></svg>
+      <span>邮箱</span>
+    </a>
+  </nav>
+
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       const path = window.location.pathname;
       if (path === '/') {
         document.getElementById('nav-dashboard')?.classList.add('active');
+        document.getElementById('mnav-dashboard')?.classList.add('active');
       } else if (path.startsWith('/emails')) {
         document.getElementById('nav-emails')?.classList.add('active');
+        document.getElementById('mnav-emails')?.classList.add('active');
       } else if (path.startsWith('/digests')) {
         document.getElementById('nav-digests')?.classList.add('active');
+        document.getElementById('mnav-digests')?.classList.add('active');
+      } else if (path.startsWith('/accounts')) {
+        document.getElementById('nav-accounts')?.classList.add('active');
+        document.getElementById('mnav-accounts')?.classList.add('active');
       }
 
-      // 皮肤切换交互逻辑与双重元素绑定
+      // 侧边栏折叠与移动端 Drawer 控制
+      const topbarSidebarToggle = document.getElementById('topbarSidebarToggle');
+      const sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
+      const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+      function isMobile() {
+        return window.innerWidth <= 768;
+      }
+
+      function toggleSidebar() {
+        if (isMobile()) {
+          document.body.classList.toggle('drawer-open');
+        } else {
+          document.body.classList.toggle('sidebar-collapsed');
+          const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+          localStorage.setItem('rhmail_sidebar_collapsed', isCollapsed ? 'true' : 'false');
+        }
+      }
+
+      // 恢复桌面端折叠状态
+      if (!isMobile() && localStorage.getItem('rhmail_sidebar_collapsed') === 'true') {
+        document.body.classList.add('sidebar-collapsed');
+      }
+
+      topbarSidebarToggle?.addEventListener('click', toggleSidebar);
+      sidebarCollapseBtn?.addEventListener('click', toggleSidebar);
+      sidebarOverlay?.addEventListener('click', () => {
+        document.body.classList.remove('drawer-open');
+      });
+
+      // 皮肤切换交互逻辑
       const themePicker = document.getElementById('themePicker');
       const themePickerBtn = document.getElementById('themePickerBtn');
       const themeOptions = document.querySelectorAll('.theme-option');

@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import sys
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone as tz
 from sqlalchemy import select
 
 from app.db import SessionLocal, init_db
@@ -15,13 +15,20 @@ log = logging.getLogger("jobs")
 
 
 def _sync_accounts_from_config(db) -> None:
+    """Seed accounts from environment variables (first-time import only)."""
     for acc in settings.gmail_accounts:
         row = db.scalar(select(GmailAccount).where(GmailAccount.email == acc["email"]))
         if row:
-            row.refresh_token = acc["refresh_token"]
-            row.needs_reauth = False
+            # Only update token if account was originally added via env vars
+            if row.added_via == "env":
+                row.refresh_token = acc["refresh_token"]
+                row.needs_reauth = False
         else:
-            db.add(GmailAccount(email=acc["email"], refresh_token=acc["refresh_token"]))
+            db.add(GmailAccount(
+                email=acc["email"],
+                refresh_token=acc["refresh_token"],
+                added_via="env",
+            ))
     db.commit()
 
 
@@ -87,6 +94,7 @@ async def fetch_and_analyze() -> None:  # noqa: C901
                 db.commit()
 
             acc.last_history_id = new_hid
+            acc.last_sync_at = datetime.now(tz.utc).replace(tzinfo=None)
             db.commit()
             log.info("synced %s: %d new", acc.email, len(messages))
     finally:

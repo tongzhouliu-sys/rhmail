@@ -4,39 +4,7 @@
 
 <div class="gmail-layout">
   <!-- 左侧 Gmail 风格类别导航侧边栏 -->
-  <aside class="gmail-sidebar">
-    <div class="sidebar-section-title">常用视图</div>
-
-    <a href="/emails" class="sidebar-item {% if not f.category and not f.importance %}active{% endif %}">
-      <div class="sidebar-item-label">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-        全部收件箱
-      </div>
-    </a>
-    <a href="/emails?importance=4" class="sidebar-item {% if f.importance >= 4 %}active{% endif %}">
-      <div class="sidebar-item-label" style="color: var(--imp4);">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-        重点关注 (Level ≥4)
-      </div>
-      {% if important_count %}
-      <span class="sidebar-count" style="background: rgba(249,115,22,0.15); color: var(--imp4);">{{ important_count }}</span>
-      {% endif %}
-    </a>
-
-    <div class="sidebar-section-title" style="margin-top: 1.5rem;">邮件分类 Label</div>
-    {% for c in categories %}
-    {% set cnt = by_cat.get(c.name, 0) %}
-    <a href="/emails?category={{ c.slug }}" class="sidebar-item {% if f.category == c.slug or f.category_name == c.name %}active{% endif %}">
-      <div class="sidebar-item-label">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle></svg>
-        {{ c.name }}
-      </div>
-      {% if cnt %}
-      <span class="sidebar-count">{{ cnt }}</span>
-      {% endif %}
-    </a>
-    {% endfor %}
-  </aside>
+  {% include "sidebar.html" %}
 
   <!-- 右侧邮件列表与筛选区 -->
   <main class="gmail-content">

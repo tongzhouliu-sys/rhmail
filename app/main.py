@@ -8,9 +8,10 @@ from sqlalchemy import select, func
 
 from app.config import settings
 from app.db import SessionLocal, init_db
-from app.models import GmailMessage, AnalysisResult, DailyDigest
+from app.models import GmailAccount, GmailMessage, AnalysisResult, DailyDigest
 from app.auth import make_cookie, require_page, require_api, COOKIE_NAME, _valid
 from app.jobs import fetch_and_analyze, run_daily_digest
+from app import oauth
 
 from app.cleaner import clean_text
 
@@ -301,3 +302,146 @@ async def api_emails(
     finally:
         db.close()
 
+
+# ---------- 邮箱管理 ----------
+@app.get("/accounts", response_class=HTMLResponse, dependencies=[Depends(require_page)])
+async def accounts_page(request: Request, msg: str = Query("")):
+    db = SessionLocal()
+    try:
+        accounts = db.scalars(
+            select(GmailAccount).order_by(GmailAccount.created_at.desc())
+        ).all()
+        return templates.TemplateResponse("accounts.html", {
+            "request": request,
+            "accounts": accounts,
+            "msg": msg,
+        })
+    finally:
+        db.close()
+
+
+@app.get("/accounts/add", dependencies=[Depends(require_page)])
+async def accounts_add(request: Request):
+    """Initiate the Google OAuth flow to add a new Gmail account."""
+    state = oauth.generate_state()
+    # Store state in a short-lived cookie for CSRF verification
+    auth_url = oauth.get_auth_url(state)
+    resp = RedirectResponse(auth_url, status_code=302)
+    resp.set_cookie("oauth_state", state, max_age=600, httponly=True, samesite="lax")
+    return resp
+
+
+@app.get("/oauth/callback")
+async def oauth_callback(
+    request: Request,
+    code: str = Query(""),
+    state: str = Query(""),
+    error: str = Query(""),
+):
+    """Handle the Google OAuth callback after user grants access."""
+    if error:
+        log.warning("OAuth callback error: %s", error)
+        return RedirectResponse(f"/accounts?msg=授权失败: {error}", status_code=302)
+
+    # Verify CSRF state
+    saved_state = request.cookies.get("oauth_state", "")
+    if not state or state != saved_state:
+        return RedirectResponse("/accounts?msg=授权验证失败(state 不匹配)", status_code=302)
+
+    try:
+        result = await oauth.exchange_code(code)
+    except ValueError as e:
+        log.exception("OAuth exchange failed: %s", e)
+        return RedirectResponse(f"/accounts?msg=授权交换失败: {e}", status_code=302)
+
+    # Save or update the account in the database
+    db = SessionLocal()
+    try:
+        existing = db.scalar(
+            select(GmailAccount).where(GmailAccount.email == result["email"])
+        )
+        if existing:
+            existing.refresh_token = result["refresh_token"]
+            existing.needs_reauth = False
+            existing.is_active = True
+            existing.added_via = "oauth"
+            msg = f"已更新邮箱 {result['email']} 的授权"
+        else:
+            db.add(GmailAccount(
+                email=result["email"],
+                refresh_token=result["refresh_token"],
+                added_via="oauth",
+            ))
+            msg = f"成功添加邮箱 {result['email']}"
+        db.commit()
+    finally:
+        db.close()
+
+    resp = RedirectResponse(f"/accounts?msg={msg}", status_code=302)
+    resp.delete_cookie("oauth_state")
+    return resp
+
+
+@app.post("/api/accounts/{account_id}/toggle", dependencies=[Depends(require_api)])
+async def toggle_account(account_id: int):
+    """Toggle the is_active state of a Gmail account."""
+    db = SessionLocal()
+    try:
+        acc = db.get(GmailAccount, account_id)
+        if not acc:
+            raise HTTPException(404, "Account not found")
+        acc.is_active = not acc.is_active
+        db.commit()
+        return {"id": acc.id, "is_active": acc.is_active}
+    finally:
+        db.close()
+
+
+@app.get("/api/accounts/{account_id}/reauth", dependencies=[Depends(require_page)])
+async def reauth_account(account_id: int):
+    """Re-initiate OAuth for an account that needs re-authorization."""
+    db = SessionLocal()
+    try:
+        acc = db.get(GmailAccount, account_id)
+        if not acc:
+            raise HTTPException(404, "Account not found")
+    finally:
+        db.close()
+    # Redirect into the standard OAuth flow
+    state = oauth.generate_state()
+    auth_url = oauth.get_auth_url(state)
+    resp = RedirectResponse(auth_url, status_code=302)
+    resp.set_cookie("oauth_state", state, max_age=600, httponly=True, samesite="lax")
+    return resp
+
+
+@app.delete("/api/accounts/{account_id}", dependencies=[Depends(require_api)])
+async def delete_account(account_id: int):
+    """Delete a Gmail account and all its associated messages and analysis results."""
+    db = SessionLocal()
+    try:
+        acc = db.get(GmailAccount, account_id)
+        if not acc:
+            raise HTTPException(404, "Account not found")
+        # Delete associated analysis results, messages, digests
+        messages = db.scalars(
+            select(GmailMessage).where(GmailMessage.account_id == account_id)
+        ).all()
+        for msg in messages:
+            analysis = db.scalar(
+                select(AnalysisResult).where(AnalysisResult.message_pk == msg.id)
+            )
+            if analysis:
+                db.delete(analysis)
+        for msg in messages:
+            db.delete(msg)
+        digests = db.scalars(
+            select(DailyDigest).where(DailyDigest.account_id == account_id)
+        ).all()
+        for d in digests:
+            db.delete(d)
+        db.delete(acc)
+        db.commit()
+        return {"ok": True, "deleted_email": acc.email}
+    finally:
+        db.close()

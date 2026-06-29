@@ -170,7 +170,8 @@ sequenceDiagram
 │   ├── db.py                       # [核心] 数据库 Engine 与 Session 初始化
 │   ├── models.py                   # [核心] SQLAlchemy ORM 数据模型定义
 │   ├── auth.py                     # [核心] Session Cookie 签验与路由鉴权依赖
-│   ├── gmail.py                    # [核心] Google OAuth 认证与 Gmail API 数据拉取
+│   ├── oauth.py                    # [核心] Google OAuth 2.0 Web 授权流程 (构建授权URL、交换Token、获取邮箱地址)
+│   ├── gmail.py                    # [核心] Gmail API 数据拉取与增量同步
 │   ├── prefilter.py                # [核心] 规则预过滤模块 (黑白名单/退订/主题正则)
 │   ├── cleaner.py                  # [核心] HTML 转文本、引用/签名剥离与正文截断
 │   ├── analyzer.py                 # [核心] LLM API 调用与 JSON 格式解析
@@ -179,13 +180,14 @@ sequenceDiagram
 │   └── main.py                     # [核心] FastAPI 应用入口、路由与 HTML 模板渲染
 ├── scripts/                        # [辅助/工具] 运维与辅助脚本
 │   ├── __init__.py                 # 包初始化文件
-│   └── authorize.py                # [核心工具] 首次获取 Gmail OAuth Refresh Token 的 CLI 工具
+│   └── authorize.py                # [辅助工具] 本地 CLI 获取 Gmail OAuth Refresh Token (已被 Web OAuth 替代)
 ├── static/                         # [核心] Web 静态资源目录
-│   └── style.css                   # 全站 CSS 样式表 (RHMail AI 视觉主题、SVG 效果、响应式)
+│   └── style.css                   # 全站 CSS 样式表 (RHMail AI 视觉主题、SVG 效果、响应式、账号管理组件)
 └── templates/                      # [核心] Jinja2 HTML 页面模板 (包含现代 SVG 图标组件)
-    ├── base.html                   # 基础布局模板 (TopBar, RHMail AI 品牌导航)
+    ├── base.html                   # 基础布局模板 (TopBar, RHMail AI 品牌导航，含「邮箱」入口)
     ├── login.html                  # 密码登录页面 (带品牌 Logo)
     ├── dashboard.html              # 概览看板主页 (指标卡片、分类分布、最近日报)
+    ├── accounts.html               # 邮箱管理页面 (添加/禁用/重新授权/删除 Gmail 账号)
     ├── emails.html                 # 邮件列表页 (多维度筛选、精准图标、分页)
     ├── email_detail.html           # 邮件详情页 (AI 核心提炼卡片与正文)
     ├── digests.html                # 历史日报归档列表页
@@ -201,11 +203,16 @@ sequenceDiagram
 
 ## 4. 业务能力说明 (Business Capabilities)
 
-### 4.1 功能一：Gmail 账号授权与 Refresh Token 获取
-* **作用**：引导用户在本地通过 OAuth 2.0 桌面端流程登录 Google 账号，获取具有 `gmail.readonly` 权限的持久化 `refresh_token`。
-* **入口**：运行 CLI 脚本 `python scripts/authorize.py`。
-* **核心流程**：依赖项目根目录下的 `client_secret.json`，启动本地 8765 端口 Web 服务，拉起浏览器授权；用户同意后获取 Credentials 并打印 `GMAIL_EMAIL_N` 与 `GMAIL_REFRESH_TOKEN_N`。
-* **依赖配置**：`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`。
+### 4.1 功能一：Gmail 账号授权与邮箱管理
+* **作用**：用户可在 Web 后台通过 OAuth 2.0 Web 流程添加 Gmail 账号，获取具有 `gmail.readonly` 权限的持久化 `refresh_token`，并自动存入数据库。
+* **入口**：Web 后台 `/accounts` 页面，点击「添加 Gmail 邮箱」按钮发起 OAuth 授权。也保留了 CLI 脚本 `python scripts/authorize.py` 作为备用。
+* **核心流程**：
+  1. 用户点击「添加 Gmail」→ 系统构建 Google OAuth URL 并重定向到 Google 授权页。
+  2. 用户授权后回调到 `/oauth/callback`，系统用授权码换取 `refresh_token` 并调用 Gmail API 获取邮箱地址。
+  3. 账号信息写入 `gmail_accounts` 表，自动加入同步列表。
+* **管理能力**：启用/禁用同步开关、重新授权 (Token 失效时)、删除账号及其所有关联数据。
+* **环境变量种子**：环境变量 `GMAIL_EMAIL_N` / `GMAIL_REFRESH_TOKEN_N` 保留为可选初始种子，首次启动时自动导入数据库，Web 授权的 Token 不会被环境变量覆盖。
+* **依赖配置**：`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `OAUTH_REDIRECT_URI`。
 * **风险点**：若在 GCP Console 中未将 OAuth 应用发布为 **Production** 状态，获取的 Refresh Token 将在 7 天后强制失效，引发 `google.auth.exceptions.RefreshError`。
 
 ### 4.2 功能二：定时增量邮件拉取与同步 (CLI 独立执行)
@@ -331,6 +338,8 @@ erDiagram
 * **`last_history_id`**: `String(64)`, 允许为空, Gmail API 增量游标。
 * **`is_active`**: `Boolean`, 默认 `True`, 是否启用同步。
 * **`needs_reauth`**: `Boolean`, 默认 `False`, 授权失效标识（为 `True` 时跳过同步）。
+* **`last_sync_at`**: `DateTime`, 允许为空, 最后一次成功同步的时间。
+* **`added_via`**: `String(16)`, 默认 `"oauth"`, 账号来源标记（`"env"` 环境变量导入 / `"oauth"` Web 授权添加）。
 * **`created_at` / `updated_at`**: `DateTime`, 创建与更新时间。
 
 #### 2. `gmail_messages` (邮件明细表)
@@ -381,6 +390,9 @@ erDiagram
 | 接口地址 | HTTP 方法 | 鉴权依赖 | 描述 |
 |---|---|---|---|
 | `/` | `GET` | `require_page` | 概览主页，展示邮件总数、重要邮件数、分类统计与近14天日报列表 |
+| `/accounts` | `GET` | `require_page` | 邮箱管理页，展示所有 Gmail 账号列表（状态、开关、操作） |
+| `/accounts/add` | `GET` | `require_page` | 发起 Google OAuth 授权流程，重定向到 Google |
+| `/oauth/callback` | `GET` | 无需认证 | Google OAuth 回调端点，换取 Token 并写入数据库 |
 | `/emails` | `GET` | `require_page` | 邮件列表页，支持 Query 参数: `category`, `importance`, `date_from`, `date_to`, `page` (默认1，每页25条) |
 | `/emails/{pk}` | `GET` | `require_page` | 邮件详情页，主键 `pk` 对应 `gmail_messages.id` |
 | `/digests` | `GET` | `require_page` | 历史日报归档列表页 (最近90天) |
@@ -412,6 +424,20 @@ erDiagram
 }
 ```
 
+#### `POST /api/accounts/{id}/toggle`
+* **鉴权依赖**：`require_api`。
+* **作用**：切换指定 Gmail 账号的 `is_active` 同步状态。
+* **返回值**：`{"id": 1, "is_active": true}`。
+
+#### `GET /api/accounts/{id}/reauth`
+* **鉴权依赖**：`require_page`。
+* **作用**：重新发起 OAuth 授权流程（用于 Token 失效的场景）。
+
+#### `DELETE /api/accounts/{id}`
+* **鉴权依赖**：`require_api`。
+* **作用**：删除指定 Gmail 账号及其所有关联邮件、分析结果与日报。
+* **返回值**：`{"ok": true, "deleted_email": "user@gmail.com"}`。
+
 ---
 
 ## 8. 配置项说明 (Configuration)
@@ -422,14 +448,15 @@ erDiagram
 |---|---|---|---|---|---|
 | `GOOGLE_CLIENT_ID` | String | 无 (触发 KeyError) | **是** | `gmail.py`, `authorize.py` | GCP OAuth 2.0 客户端 ID |
 | `GOOGLE_CLIENT_SECRET`| String | 无 (触发 KeyError) | **是** | `gmail.py`, `authorize.py` | GCP OAuth 2.0 客户端密钥 |
-| `GMAIL_EMAIL_N` | String | 无 | **是** (至少需1组) | `config.py`, `jobs.py` | 绑定的 Gmail 地址 (如 `GMAIL_EMAIL_1`) |
-| `GMAIL_REFRESH_TOKEN_N`| String | 无 | **是** (至少需1组) | `config.py`, `jobs.py` | 对应 Gmail 的 OAuth 刷新令牌 (如 `GMAIL_REFRESH_TOKEN_1`) |
+| `GMAIL_EMAIL_N` | String | 无 | 否 (可选种子) | `config.py`, `jobs.py` | 绑定的 Gmail 地址 (首次启动自动导入DB，后续可通过 Web 添加) |
+| `GMAIL_REFRESH_TOKEN_N`| String | 无 | 否 (可选种子) | `config.py`, `jobs.py` | 对应 Gmail 的 OAuth 刷新令牌 (仅在首次导入时写入) |
 | `LLM_API_BASE` | String | 无 (触发 KeyError) | **是** | `analyzer.py` | OpenAI 兼容的 API Base 地址 |
 | `LLM_API_KEY` | String | 无 (触发 KeyError) | **是** | `analyzer.py` | LLM API 密钥 (`sk-...`) |
 | `LLM_MODEL` | String | `gpt-4o-mini` | 否 | `analyzer.py` | 调用的模型名称 |
 | `DASHBOARD_PASSWORD` | String | 无 (触发 KeyError) | **是** | `main.py` | Web 看板登录密码 |
 | `SECRET_KEY` | String | 无 (触发 KeyError) | **是** | `auth.py` | Session Cookie 加密签名密钥 |
 | `DATABASE_URL` | String | `sqlite:////app/data/app.db` | 否 | `db.py` | 数据库连接字符串 (生产推荐 PostgreSQL) |
+| `OAUTH_REDIRECT_URI` | String | `""` | 是 (部署时) | `oauth.py` | Google OAuth 2.0 Web 回调地址 (如 `https://your-domain/oauth/callback`) |
 | `SESSION_LIFETIME_DAYS`| Int | `7` | 否 | `auth.py`, `main.py` | 登录 Session 有效期 (天) |
 | `FETCH_INTERVAL_MINUTES`| Int | `5` | 否 | `config.py` | (已解耦) 配置备用参数 |
 | `DIGEST_HOUR` | Int | `8` | 否 | `config.py` | (已解耦) 配置备用参数 |
