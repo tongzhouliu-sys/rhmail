@@ -125,6 +125,10 @@ html[data-theme="violet"], body[data-theme="violet"], [data-theme="violet"] {
   --transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.text-success { color: #34d399 !important; }
+.text-warning { color: #fbbf24 !important; }
+.text-danger  { color: #f87171 !important; }
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
