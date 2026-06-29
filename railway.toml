@@ -3,19 +3,16 @@ builder = "dockerfile"
 
 # ── Web 服务（常驻） ──────────────────────────────────────────
 [deploy]
-startCommand = "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+startCommand = "sh -c 'uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}'"
 healthcheckPath = "/health"
 restartPolicyType = "always"
 
-[[volumes]]
-mountPath = "/app/data"
-
 # ── Cron：每 60 分钟拉取并分析邮件 ──────────────────────────
-[[crons]]
+[[cron]]
 schedule = "*/60 * * * *"
 command = "python -m app.jobs fetch"
 
 # ── Cron：每天 08:00 (UTC+8 → UTC 00:00) 生成日报 ───────────
-[[crons]]
+[[cron]]
 schedule = "0 0 * * *"
 command = "python -m app.jobs digest"

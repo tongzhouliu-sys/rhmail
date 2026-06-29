@@ -1,5 +1,9 @@
 import os
+import sys
+import logging
 from dataclasses import dataclass, field
+
+log = logging.getLogger("config")
 
 
 def _accounts_from_env() -> list[dict]:
@@ -14,20 +18,28 @@ def _accounts_from_env() -> list[dict]:
     return out
 
 
+def _get_database_url() -> str:
+    url = os.environ.get("DATABASE_URL", "sqlite:////app/data/app.db")
+    # Railway PostgreSQL 插件注入的连接串通常以 postgres:// 开头，SQLAlchemy 2.0 需替换为 postgresql://
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+    return url
+
+
 @dataclass
 class Settings:
-    google_client_id: str = field(default_factory=lambda: os.environ["GOOGLE_CLIENT_ID"])
-    google_client_secret: str = field(default_factory=lambda: os.environ["GOOGLE_CLIENT_SECRET"])
+    google_client_id: str = field(default_factory=lambda: os.environ.get("GOOGLE_CLIENT_ID", ""))
+    google_client_secret: str = field(default_factory=lambda: os.environ.get("GOOGLE_CLIENT_SECRET", ""))
     gmail_accounts: list[dict] = field(default_factory=_accounts_from_env)
 
-    llm_api_base: str = field(default_factory=lambda: os.environ["LLM_API_BASE"])
-    llm_api_key: str = field(default_factory=lambda: os.environ["LLM_API_KEY"])
+    llm_api_base: str = field(default_factory=lambda: os.environ.get("LLM_API_BASE", ""))
+    llm_api_key: str = field(default_factory=lambda: os.environ.get("LLM_API_KEY", ""))
     llm_model: str = field(default_factory=lambda: os.environ.get("LLM_MODEL", "gpt-4o-mini"))
 
-    database_url: str = field(default_factory=lambda: os.environ.get("DATABASE_URL", "sqlite:////app/data/app.db"))
+    database_url: str = field(default_factory=_get_database_url)
 
-    dashboard_password: str = field(default_factory=lambda: os.environ["DASHBOARD_PASSWORD"])
-    secret_key: str = field(default_factory=lambda: os.environ["SECRET_KEY"])
+    dashboard_password: str = field(default_factory=lambda: os.environ.get("DASHBOARD_PASSWORD", ""))
+    secret_key: str = field(default_factory=lambda: os.environ.get("SECRET_KEY", ""))
     session_lifetime_days: int = field(default_factory=lambda: int(os.environ.get("SESSION_LIFETIME_DAYS", "7")))
 
     fetch_interval_minutes: int = field(default_factory=lambda: int(os.environ.get("FETCH_INTERVAL_MINUTES", "5")))
@@ -44,5 +56,16 @@ class Settings:
         s for s in os.environ.get("BLACKLIST_FROM", "").split(",") if s
     ])
 
+    def check_required_envs(self) -> None:
+        missing = []
+        for name in ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "LLM_API_BASE", "LLM_API_KEY", "DASHBOARD_PASSWORD", "SECRET_KEY"]:
+            if not getattr(self, name.lower(), None):
+                missing.append(name)
+        if not self.gmail_accounts:
+            missing.append("GMAIL_EMAIL_1 & GMAIL_REFRESH_TOKEN_1")
+        if missing:
+            log.warning(f"⚠️ 缺少以下环境变量，可能导致功能异常: {', '.join(missing)}")
+
 
 settings = Settings()
+settings.check_required_envs()
