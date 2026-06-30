@@ -2371,20 +2371,20 @@ body.login-page {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
   border-radius: 50%;
   cursor: pointer;
-  transition: var(--transition);
+  opacity: 0.45;
+  transition: opacity 0.15s ease, color 0.15s ease;
 }
 .about-picker-btn:hover,
 .about-picker.open .about-picker-btn {
-  background: var(--surface-hover);
-  border-color: var(--border-hover);
-  color: var(--text-main);
+  opacity: 1;
+  color: var(--text-muted);
 }
 .about-menu {
   position: absolute;
