@@ -8,6 +8,8 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 
+from datetime import datetime, timedelta
+from collections import defaultdict
 from app.config import settings
 from app.db import SessionLocal, init_db
 from app.models import GmailAccount, GmailMessage, AnalysisResult, DailyDigest
@@ -277,10 +279,40 @@ async def digest_detail(request: Request, day: str):
             .options(joinedload(DailyDigest.account))
             .where(DailyDigest.date == day)
         ).all()
+        
+        # Load all messages for this date
+        try:
+            start = datetime.fromisoformat(day)
+            end = start + timedelta(days=1)
+            rows = db.execute(
+                select(GmailMessage, AnalysisResult)
+                .join(AnalysisResult, AnalysisResult.message_pk == GmailMessage.id)
+                .where(
+                    GmailMessage.received_at >= start,
+                    GmailMessage.received_at < end,
+                )
+                .order_by(AnalysisResult.importance.desc(), GmailMessage.received_at.desc())
+            ).all()
+        except Exception as e:
+            log.error(f"Error parsing date or querying messages: {e}")
+            rows = []
+            
+        digest_data = []
+        for d in items:
+            account_messages = [
+                (m, a) for m, a in rows if m.account_id == d.account_id
+            ]
+            digest_data.append({
+                "digest": d,
+                "account": d.account,
+                "messages": account_messages,
+            })
+            
         ctx = {
             "request": request,
             "day": day,
             "items": items,
+            "digest_data": digest_data,
         }
         ctx.update(get_sidebar_context(db))
         return templates.TemplateResponse("digest_detail.html", ctx)

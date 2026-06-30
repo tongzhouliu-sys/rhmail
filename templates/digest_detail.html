@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "macros.html" import cat_badge %}
 {% block title %}{{ day }} AI 智能分析日报{% endblock %}
 {% block body %}
 
@@ -20,8 +21,8 @@
     </div>
   </div>
 
-  {% if items %}
-    {% for d in items %}
+  {% if digest_data %}
+    {% for d_data in digest_data %}
     <div class="digest-detail-card">
       <div class="digest-detail-card-header">
         <div class="digest-detail-card-account">
@@ -29,16 +30,16 @@
             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
             <polyline points="22,6 12,13 2,6"></polyline>
           </svg>
-          <span>{{ d.account.email }}</span>
+          <span>{{ d_data.account.email }}</span>
         </div>
         <div class="digest-detail-card-badges">
           <span class="cat-badge" style="background:rgba(99,102,241,0.08); color:var(--primary); border-color:rgba(99,102,241,0.18); padding:5px 12px; font-size:12.5px; font-weight:600; border-radius: var(--radius-full);">
-            共 {{ d.total_emails }} 封邮件
+            共 {{ d_data.digest.total_emails }} 封邮件
           </span>
-          {% if d.important_emails %}
+          {% if d_data.digest.important_emails %}
           <span class="digest-badge-urgent" style="padding: 5px 12px; font-size: 12.5px;">
             <span class="digest-pulse-dot"></span>
-            {{ d.important_emails }} 封重点关注
+            {{ d_data.digest.important_emails }} 封重点关注
           </span>
           {% else %}
           <span class="digest-badge-done" style="padding: 5px 12px; font-size: 12.5px;">
@@ -48,10 +49,77 @@
           {% endif %}
         </div>
       </div>
-      
-      <div class="digest-detail-card-body markdown-body">
-        <textarea class="markdown-raw" style="display:none;">{{ d.content_md }}</textarea>
-        <div class="markdown-target">{{ d.content_md | markdown | safe }}</div>
+
+      <!-- Tab 控制头部 -->
+      <div class="digest-tab-headers">
+        <button class="digest-tab-btn active" onclick="switchDigestTab(this, 'table-{{ d_data.account.id }}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line></svg>
+          智能分析表格
+        </button>
+        <button class="digest-tab-btn" onclick="switchDigestTab(this, 'text-{{ d_data.account.id }}')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+          AI 完整日报文本
+        </button>
+      </div>
+
+      <!-- Tab 1: 智能分析表格 -->
+      <div id="table-{{ d_data.account.id }}" class="digest-tab-content active">
+        {% if d_data.messages %}
+        <div class="digest-table-wrapper">
+          <table class="digest-table">
+            <thead>
+              <tr>
+                <th style="width: 80px;">重要度</th>
+                <th style="width: 130px;">分类标签</th>
+                <th style="width: 200px;">发件人</th>
+                <th>邮件摘要分析</th>
+                <th style="width: 100px; text-align: center;">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for m, a in d_data.messages %}
+              <tr>
+                <td>
+                  <span class="digest-imp-badge imp-{{ a.importance }}">
+                    Level {{ a.importance }}
+                  </span>
+                </td>
+                <td>
+                  {{ cat_badge(a.category) }}
+                </td>
+                <td class="digest-col-sender">
+                  <div class="sender-name">{{ m.from_name or m.from_email.split('@')[0] }}</div>
+                  <div class="sender-email">{{ m.from_email }}</div>
+                </td>
+                <td class="digest-col-summary">
+                  <div class="summary-one-line">{{ a.one_line or m.subject }}</div>
+                  <div class="summary-details">
+                    {{ a.summary | render_summary | safe }}
+                  </div>
+                </td>
+                <td style="text-align: center; vertical-align: middle;">
+                  <a href="/emails/{{ m.id }}" class="digest-action-btn" target="_blank">
+                    查看详情
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div style="padding: 4rem 2rem; text-align: center; color: var(--text-muted);">
+          <p style="margin: 0; font-size: 14px;">当日暂无同步分析过的具体邮件数据。</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Tab 2: 完整日报文本 -->
+      <div id="text-{{ d_data.account.id }}" class="digest-tab-content">
+        <div class="digest-detail-card-body markdown-body">
+          <textarea class="markdown-raw" style="display:none;">{{ d_data.digest.content_md }}</textarea>
+          <div class="markdown-target">{{ d_data.digest.content_md | markdown | safe }}</div>
+        </div>
       </div>
     </div>
     {% endfor %}
@@ -68,5 +136,19 @@
   </div>
   {% endif %}
 </div>
+
+<script>
+  function switchDigestTab(btn, contentId) {
+    const card = btn.closest('.digest-detail-card');
+    
+    // 取消激活所有按钮与内容
+    card.querySelectorAll('.digest-tab-btn').forEach(b => b.classList.remove('active'));
+    card.querySelectorAll('.digest-tab-content').forEach(c => c.classList.remove('active'));
+    
+    // 激活当前点击的
+    btn.classList.add('active');
+    card.querySelector('#' + contentId).classList.add('active');
+  }
+</script>
 
 {% endblock %}

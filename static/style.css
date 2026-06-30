@@ -2674,3 +2674,152 @@ body.login-page {
   }
 }
 
+/* 日报详情 Tab 导航与表格样式 */
+.digest-tab-headers {
+  display: flex;
+  background: rgba(0, 0, 0, 0.12);
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem 1rem 0;
+  gap: 0.5rem;
+}
+
+.digest-tab-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  color: var(--text-muted);
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: var(--transition);
+}
+
+.digest-tab-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.digest-tab-btn.active {
+  color: var(--primary);
+  background: var(--surface-solid);
+  border-color: var(--border);
+  border-bottom: 1px solid var(--surface-solid);
+  margin-bottom: -1px;
+}
+
+.digest-tab-content {
+  display: none;
+}
+
+.digest-tab-content.active {
+  display: block;
+}
+
+.digest-table-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.digest-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13.5px;
+}
+
+.digest-table th {
+  font-weight: 700;
+  color: var(--text-dim);
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.08);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+}
+
+.digest-table td {
+  padding: 1.25rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  color: var(--text-main);
+}
+
+.digest-table tr:last-child td {
+  border-bottom: none;
+}
+
+.digest-table tr:hover td {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.digest-col-sender .sender-name {
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.15rem;
+}
+
+.digest-col-sender .sender-email {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.digest-col-summary .summary-one-line {
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.6rem;
+  font-size: 14px;
+}
+
+.digest-col-summary .summary-details {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* 重要度徽章 */
+.digest-imp-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.digest-imp-badge.imp-1 { background: rgba(100, 116, 139, 0.12); color: var(--imp1); }
+.digest-imp-badge.imp-2 { background: rgba(59, 130, 246, 0.12); color: var(--imp2); }
+.digest-imp-badge.imp-3 { background: rgba(16, 185, 129, 0.12); color: var(--imp3); }
+.digest-imp-badge.imp-4 { background: rgba(249, 115, 22, 0.12); color: var(--imp4); }
+.digest-imp-badge.imp-5 { background: rgba(239, 68, 68, 0.12); color: var(--imp5); }
+
+/* 操作按钮 */
+.digest-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-muted) !important;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.digest-action-btn:hover {
+  color: var(--primary) !important;
+  border-color: var(--primary);
+  background: var(--primary-glow);
+}
+
+
