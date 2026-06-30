@@ -39,31 +39,18 @@
           </button>
         </form>
 
-        <!-- 版权信息组件 -->
-        <div class="about-picker" id="aboutPicker">
-          <button class="about-picker-btn" id="aboutPickerBtn" title="关于 RHMail" aria-label="关于 RHMail">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="12"></line>
-              <line x1="12" y1="16" x2="12.01" y2="16"></line>
-            </svg>
+        <!-- 版权信息 -->
+        <div style="position:relative;display:inline-block;" id="aboutPicker">
+          <button id="aboutPickerBtn" title="关于 RHMail" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;background:transparent;border:none;color:inherit;opacity:0.4;cursor:pointer;padding:0;transition:opacity .15s;" onmouseenter="this.style.opacity='.8'" onmouseleave="this.style.opacity='.4'">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
           </button>
-          <div class="about-menu" id="aboutMenu">
-            <div class="about-menu-title">关于 RHMail</div>
-            <div class="about-menu-row">
-              <span class="about-menu-label">公司</span>
-              <span class="about-menu-value">RHcloud</span>
-            </div>
-            <div class="about-menu-row">
-              <span class="about-menu-label">版本</span>
-              <span class="about-menu-value">v1.0</span>
-            </div>
-            <div class="about-menu-divider"></div>
-            <div class="about-menu-row">
-              <span class="about-menu-label">反馈</span>
-              <a class="about-menu-link" href="mailto:ceo@985.edu.kg">ceo@985.edu.kg</a>
-            </div>
-            <div class="about-menu-copy">© 2026 RHcloud. All rights reserved.</div>
+          <div id="aboutMenu" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:200px;background:var(--dropdown-bg,#1a2035);border:1px solid var(--border,rgba(255,255,255,.1));border-radius:10px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.3);z-index:300;flex-direction:column;gap:7px;font-size:12px;backdrop-filter:blur(16px);">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;opacity:.4;margin-bottom:2px;">关于 RHMail</div>
+            <div style="display:flex;justify-content:space-between;"><span style="opacity:.5;">公司</span><span style="font-weight:500;">RHcloud</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="opacity:.5;">版本</span><span style="font-weight:500;">v1.0</span></div>
+            <div style="height:1px;background:var(--border,rgba(255,255,255,.1));margin:2px 0;"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;"><span style="opacity:.5;">反馈</span><a href="mailto:ceo@985.edu.kg" style="color:var(--primary,#6366f1);text-decoration:none;font-size:11px;">ceo@985.edu.kg</a></div>
+            <div style="opacity:.35;font-size:10px;margin-top:2px;">© 2026 RHcloud. All rights reserved.</div>
           </div>
         </div>
 
@@ -231,16 +218,15 @@
         });
       });
 
-      // 版权信息弹窗交互
+      // 版权信息弹窗
       const aboutPicker = document.getElementById('aboutPicker');
-      const aboutPickerBtn = document.getElementById('aboutPickerBtn');
-      aboutPickerBtn?.addEventListener('click', (e) => {
+      const aboutMenu = document.getElementById('aboutMenu');
+      document.getElementById('aboutPickerBtn')?.addEventListener('click', (e) => {
         e.stopPropagation();
-        aboutPicker?.classList.toggle('open');
+        const open = aboutMenu.style.display === 'flex';
+        aboutMenu.style.display = open ? 'none' : 'flex';
       });
-      document.addEventListener('click', () => {
-        aboutPicker?.classList.remove('open');
-      });
+      document.addEventListener('click', () => { if (aboutMenu) aboutMenu.style.display = 'none'; });
 
       // Markdown 客户端自动高精渲染
       function renderMarkdownBlocks() {
