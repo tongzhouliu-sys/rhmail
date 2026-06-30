@@ -2368,3 +2368,309 @@ body.login-page {
   background: var(--border);
   margin: 0.5rem 0.75rem;
 }
+
+/* ==========================================
+   每日分析日报 (Daily Digests) 视觉样式重构
+   ========================================== */
+
+/* 日报列表容器 */
+.digest-list-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem 0;
+}
+
+/* 列表容器 */
+.digest-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+/* 日报列表项卡片 */
+.digest-card {
+  background: var(--surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+  overflow: hidden;
+}
+
+.digest-card:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md), 0 4px 20px var(--primary-glow);
+}
+
+.digest-card-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.75rem;
+  color: var(--text-main) !important;
+  text-decoration: none;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.digest-card-left {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+/* 图标外框 */
+.digest-icon-box {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: var(--accent-grad-glow);
+  border: 1px solid var(--border);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px var(--primary-glow);
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.digest-card:hover .digest-icon-box {
+  transform: scale(1.05) rotate(3deg);
+  background: var(--accent-grad);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 0 15px var(--primary-glow);
+}
+
+.digest-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.digest-date {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+}
+
+.digest-meta {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* 精致状态标签 */
+.digest-badge-done {
+  background: rgba(16, 185, 129, 0.08);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  font-size: 12.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.digest-badge-urgent {
+  background: rgba(244, 63, 94, 0.08);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  font-size: 12.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+/* 呼吸灯效果 */
+.digest-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: currentColor;
+  position: relative;
+}
+
+.digest-pulse-dot::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: currentColor;
+  animation: digest-dot-pulsate 1.6s ease-out infinite;
+}
+
+@keyframes digest-dot-pulsate {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+/* ──────────────────────────────────────────
+   日报详情页 (Daily Digest Details)
+   ────────────────────────────────────────── */
+
+.digest-detail-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem 0;
+}
+
+/* 顶部粘性返回栏 */
+.sticky-back-bar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--bg-base);
+  padding: 0.75rem 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+
+.back-link:hover {
+  color: var(--primary);
+}
+
+/* 详情卡片 */
+.digest-detail-card {
+  background: var(--surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+
+/* 详情卡片头部 - 显示邮箱账号 */
+.digest-detail-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border);
+}
+
+.digest-detail-card-account {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.digest-detail-card-account svg {
+  color: var(--primary);
+}
+
+.digest-detail-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* 详情内容区域 */
+.digest-detail-card-body {
+  padding: 2rem;
+  color: var(--text-main);
+  line-height: 1.75;
+}
+
+/* 日报详情 markdown 专属排版 */
+.digest-detail-card-body.markdown-body h2 {
+  font-size: 17px;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: var(--primary);
+  border-left: 3px solid var(--primary);
+  padding-left: 0.75rem;
+}
+
+.digest-detail-card-body.markdown-body h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-main);
+}
+
+.digest-detail-card-body.markdown-body p {
+  margin-bottom: 1rem;
+  color: var(--text-main);
+}
+
+.digest-detail-card-body.markdown-body ul, 
+.digest-detail-card-body.markdown-body ol {
+  margin-bottom: 1.25rem;
+  padding-left: 1.5rem;
+}
+
+.digest-detail-card-body.markdown-body li {
+  margin-bottom: 0.5rem;
+}
+
+.digest-detail-card-body.markdown-body strong {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .digest-card-link {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1.25rem;
+    gap: 0.75rem;
+  }
+  
+  .digest-card-link > div:last-child {
+    align-self: flex-end;
+  }
+
+  .digest-detail-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1.25rem;
+  }
+
+  .digest-detail-card-badges {
+    align-self: flex-start;
+  }
+
+  .digest-detail-card-body {
+    padding: 1.25rem;
+  }
+}
+

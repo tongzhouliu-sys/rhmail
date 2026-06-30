@@ -72,4 +72,6 @@ class DailyDigest(Base):
     important_emails: Mapped[int] = mapped_column(Integer, default=0)
     content_md: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    account: Mapped["GmailAccount"] = relationship()
     __table_args__ = (UniqueConstraint("date", "account_id", name="uq_date_account"),)
+

@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func
+from sqlalchemy.orm import joinedload
 
 from app.config import settings
 from app.db import SessionLocal, init_db
@@ -152,8 +153,15 @@ async def logout():
 async def dashboard(request: Request):
     db = SessionLocal()
     try:
-        digests = db.scalars(
-            select(DailyDigest).order_by(DailyDigest.date.desc()).limit(14)
+        digests = db.execute(
+            select(
+                DailyDigest.date,
+                func.sum(DailyDigest.total_emails).label("total_emails"),
+                func.sum(DailyDigest.important_emails).label("important_emails")
+            )
+            .group_by(DailyDigest.date)
+            .order_by(DailyDigest.date.desc())
+            .limit(14)
         ).all()
         ctx = {"request": request, "digests": digests}
         ctx.update(get_sidebar_context(db))
@@ -243,8 +251,15 @@ async def email_detail(request: Request, pk: int):
 async def digests_page(request: Request):
     db = SessionLocal()
     try:
-        items = db.scalars(
-            select(DailyDigest).order_by(DailyDigest.date.desc()).limit(90)
+        items = db.execute(
+            select(
+                DailyDigest.date,
+                func.sum(DailyDigest.total_emails).label("total_emails"),
+                func.sum(DailyDigest.important_emails).label("important_emails")
+            )
+            .group_by(DailyDigest.date)
+            .order_by(DailyDigest.date.desc())
+            .limit(90)
         ).all()
         ctx = {"request": request, "items": items}
         ctx.update(get_sidebar_context(db))
@@ -258,7 +273,9 @@ async def digest_detail(request: Request, day: str):
     db = SessionLocal()
     try:
         items = db.scalars(
-            select(DailyDigest).where(DailyDigest.date == day)
+            select(DailyDigest)
+            .options(joinedload(DailyDigest.account))
+            .where(DailyDigest.date == day)
         ).all()
         ctx = {
             "request": request,

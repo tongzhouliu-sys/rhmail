@@ -2,43 +2,71 @@
 {% block title %}{{ day }} AI 智能分析日报{% endblock %}
 {% block body %}
 
-<div class="sticky-back-bar">
-  <a href="/digests" class="back-link">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-    返回日报列表
-  </a>
-</div>
+<div class="digest-detail-container">
+  <div class="sticky-back-bar">
+    <a href="/digests" class="back-link">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <line x1="19" y1="12" x2="5" y2="12"></line>
+        <polyline points="12 19 5 12 12 5"></polyline>
+      </svg>
+      返回日报列表
+    </a>
+  </div>
 
-<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem;">
-  <h1 class="page-title" style="margin-bottom:0;">{{ day }} 分析日报</h1>
-</div>
-
-{% if items %}
-  {% for d in items %}
-  <div class="digest-block">
-    <div class="digest-stats">
-      <span class="cat-badge" style="background:rgba(99,102,241,0.1); color:var(--primary); border-color:rgba(99,102,241,0.2); padding:4px 12px; font-size:13px;">
-        邮件总数：{{ d.total_emails }} 封
-      </span>
-      {% if d.important_emails %}
-      <span class="highlight-badge" style="padding:4px 12px; font-size:13px;">
-        重点关注：{{ d.important_emails }} 封
-      </span>
-      {% else %}
-      <span class="cat-badge" style="background:rgba(16,185,129,0.1); color:#34d399; border-color:rgba(16,185,129,0.2); padding:4px 12px; font-size:13px;">
-        无需紧急关注项
-      </span>
-      {% endif %}
-    <div class="digest-content markdown-body">
-      <textarea class="markdown-raw" style="display:none;">{{ d.content_md }}</textarea>
-      <div class="markdown-target">{{ d.content_md | markdown | safe }}</div>
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:2rem; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
+    <div>
+      <h1 class="page-title" style="margin-bottom:0.35rem; font-size: 22px;">{{ day }} AI 分析日报</h1>
+      <p style="color: var(--text-muted); margin: 0; font-size: 13.5px;">聚合今日分析的各邮箱重要事项、待办任务与常规信息汇总</p>
     </div>
   </div>
-  {% endfor %}
-{% else %}
-<div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:3rem 0; text-align:center;">
-  <p class="muted">该日期暂无日报内容</p>
+
+  {% if items %}
+    {% for d in items %}
+    <div class="digest-detail-card">
+      <div class="digest-detail-card-header">
+        <div class="digest-detail-card-account">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+          <span>{{ d.account.email }}</span>
+        </div>
+        <div class="digest-detail-card-badges">
+          <span class="cat-badge" style="background:rgba(99,102,241,0.08); color:var(--primary); border-color:rgba(99,102,241,0.18); padding:5px 12px; font-size:12.5px; font-weight:600; border-radius: var(--radius-full);">
+            共 {{ d.total_emails }} 封邮件
+          </span>
+          {% if d.important_emails %}
+          <span class="digest-badge-urgent" style="padding: 5px 12px; font-size: 12.5px;">
+            <span class="digest-pulse-dot"></span>
+            {{ d.important_emails }} 封重点关注
+          </span>
+          {% else %}
+          <span class="digest-badge-done" style="padding: 5px 12px; font-size: 12.5px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 2px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            无需紧急关注
+          </span>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="digest-detail-card-body markdown-body">
+        <textarea class="markdown-raw" style="display:none;">{{ d.content_md }}</textarea>
+        <div class="markdown-target">{{ d.content_md | markdown | safe }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+  <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:4rem 2rem; text-align:center; backdrop-filter: blur(16px);">
+    <div style="opacity: 0.4; margin-bottom: 1rem;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+    </div>
+    <p class="muted" style="margin: 0; font-size: 15px;">该日期暂无日报内容</p>
+  </div>
+  {% endif %}
 </div>
-{% endif %}
 
 {% endblock %}
