@@ -2361,3 +2361,86 @@ body.login-page {
   .sum-facts { grid-template-columns: 1fr; gap: 0.15rem 0; }
   .sum-fact { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.15rem 0; }
 }
+
+/* ── About / Copyright Picker ── */
+.about-picker {
+  position: relative;
+  display: inline-block;
+}
+.about-picker-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.about-picker-btn:hover,
+.about-picker.open .about-picker-btn {
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+  color: var(--text-main);
+}
+.about-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 220px;
+  background: var(--dropdown-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.75rem;
+  box-shadow: var(--shadow-lg);
+  z-index: 200;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  animation: themeMenuFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.about-picker.open .about-menu { display: flex; }
+.about-menu-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.about-menu-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+.about-menu-label { color: var(--text-muted); }
+.about-menu-value { color: var(--text-main); font-weight: 500; }
+.about-menu-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 12px;
+}
+.about-menu-link:hover { text-decoration: underline; }
+.about-menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 2px 0;
+}
+.about-menu-copy {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* ── Sidebar Bottom Divider ── */
+.sidebar-bottom-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0.5rem 0.75rem;
+}

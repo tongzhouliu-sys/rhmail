@@ -39,6 +39,34 @@
           </button>
         </form>
 
+        <!-- 版权信息组件 -->
+        <div class="about-picker" id="aboutPicker">
+          <button class="about-picker-btn" id="aboutPickerBtn" title="关于 RHMail" aria-label="关于 RHMail">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </button>
+          <div class="about-menu" id="aboutMenu">
+            <div class="about-menu-title">关于 RHMail</div>
+            <div class="about-menu-row">
+              <span class="about-menu-label">公司</span>
+              <span class="about-menu-value">RHcloud</span>
+            </div>
+            <div class="about-menu-row">
+              <span class="about-menu-label">版本</span>
+              <span class="about-menu-value">v1.0</span>
+            </div>
+            <div class="about-menu-divider"></div>
+            <div class="about-menu-row">
+              <span class="about-menu-label">反馈</span>
+              <a class="about-menu-link" href="mailto:ceo@985.edu.kg">ceo@985.edu.kg</a>
+            </div>
+            <div class="about-menu-copy">© 2026 RHcloud. All rights reserved.</div>
+          </div>
+        </div>
+
         <!-- 皮肤切换组件 -->
         <div class="theme-picker" id="themePicker">
           <button class="theme-picker-btn" id="themePickerBtn" title="切换主题皮肤" aria-label="切换主题皮肤">
@@ -201,6 +229,17 @@
           applyTheme(themeId);
           themePicker?.classList.remove('open');
         });
+      });
+
+      // 版权信息弹窗交互
+      const aboutPicker = document.getElementById('aboutPicker');
+      const aboutPickerBtn = document.getElementById('aboutPickerBtn');
+      aboutPickerBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        aboutPicker?.classList.toggle('open');
+      });
+      document.addEventListener('click', () => {
+        aboutPicker?.classList.remove('open');
       });
 
       // Markdown 客户端自动高精渲染
