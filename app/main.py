@@ -28,11 +28,13 @@ from app.jobs import fetch_and_analyze, run_daily_digest
 from app import oauth
 
 from app.cleaner import clean_text, render_markdown, render_summary
+from app.middleware import add_security_middleware
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
 
 app = FastAPI(title="Gmail AI Analyzer", version="1.0")
+add_security_middleware(app)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 templates.env.filters["clean_text"] = clean_text
