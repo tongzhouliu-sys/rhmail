@@ -43,16 +43,22 @@ templates.env.filters["render_summary"] = render_summary
 # ---------- 全局异常处理 ----------
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """捕获所有未处理的异常，记录日志并返回友好错误响应"""
+    """捕获所有未处理的异常，记录日志并返回友好错误响应。
+    注意：必须让 HTTPException 正常传递，不能拦截认证重定向等正常流程。
+    """
+    # 让 FastAPI 原生的 HTTPException（含 307 重定向、404 等）正常处理
+    if isinstance(exc, HTTPException):
+        raise exc
+
     log.exception("Unhandled exception: %s", exc)
-    
+
     # API 端点返回 JSON
     if request.url.path.startswith("/api/"):
         return JSONResponse(
             status_code=500,
             content={"detail": "服务器内部错误，请稍后重试"},
         )
-    
+
     # 页面端点返回 HTML
     return HTMLResponse(
         status_code=500,
