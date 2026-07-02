@@ -41,15 +41,26 @@ templates.env.filters["render_summary"] = render_summary
 
 
 # ---------- 全局异常处理 ----------
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    """处理 HTTP 异常（含 307 重定向、404 等），确保认证流程正常。"""
+    # 重定向类异常直接返回
+    if exc.status_code == 307 and exc.headers.get("location"):
+        return RedirectResponse(url=exc.headers["location"], status_code=307)
+    # 其他 HTTP 异常按默认方式处理
+    if request.url.path.startswith("/api/"):
+        return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+    return HTMLResponse(
+        status_code=exc.status_code,
+        content=f"<html><body><h1>{exc.status_code}</h1><p>{exc.detail}</p></body></html>",
+    )
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """捕获所有未处理的异常，记录日志并返回友好错误响应。
-    注意：必须让 HTTPException 正常传递，不能拦截认证重定向等正常流程。
-    """
-    # 让 FastAPI 原生的 HTTPException（含 307 重定向、404 等）正常处理
-    if isinstance(exc, HTTPException):
-        raise exc
-
+    """捕获所有未处理的异常，记录日志并返回友好错误响应。"""
     log.exception("Unhandled exception: %s", exc)
 
     # API 端点返回 JSON
