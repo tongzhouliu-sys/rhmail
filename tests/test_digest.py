@@ -7,10 +7,15 @@ Copyright (c) 2026 RHCLOUD PTE LTD
 Developer: TONGZHOU LIU
 """
 
+import uuid
 import pytest
 from datetime import datetime
 from app.digest import render_markdown, CATEGORY_ORDER
-from app.models import GmailMessage, AnalysisResult
+from app.models import GmailAccount, GmailMessage, AnalysisResult
+
+
+def _unique_email() -> str:
+    return f"test-{uuid.uuid4().hex[:8]}@gmail.com"
 
 
 class TestDigestRenderer:
@@ -25,18 +30,13 @@ class TestDigestRenderer:
 
     def test_render_markdown_with_messages(self, db_session):
         """测试有消息的渲染"""
-        # 创建测试数据
-        from app.models import GmailAccount
-        account = GmailAccount(
-            email="test@gmail.com",
-            refresh_token="test-token",
-        )
+        account = GmailAccount(email=_unique_email(), refresh_token="test-token")
         db_session.add(account)
         db_session.commit()
         
         message = GmailMessage(
             account_id=account.id,
-            message_id="msg-1",
+            message_id=f"msg-{uuid.uuid4().hex[:8]}",
             from_email="sender@example.com",
             subject="Test Subject",
             received_at=datetime.utcnow(),
@@ -65,7 +65,6 @@ class TestDigestRenderer:
 
     def test_render_markdown_category_order(self):
         """测试分类顺序"""
-        # CATEGORY_ORDER 应该包含所有 6 个分类
         assert len(CATEGORY_ORDER) == 6
         assert "紧急·需回复" in CATEGORY_ORDER
         assert "金融·账户告警" in CATEGORY_ORDER
@@ -76,19 +75,14 @@ class TestDigestRenderer:
 
     def test_render_markdown_importance_counting(self, db_session):
         """测试重要性计数"""
-        from app.models import GmailAccount
-        account = GmailAccount(
-            email="test@gmail.com",
-            refresh_token="test-token",
-        )
+        account = GmailAccount(email=_unique_email(), refresh_token="test-token")
         db_session.add(account)
         db_session.commit()
         
-        # 创建 3 封邮件，2 封重要
         messages_data = [
-            ("msg-1", "重要通知", 4),
-            ("msg-2", "普通通知", 2),
-            ("msg-3", "紧急通知", 5),
+            (f"msg-{uuid.uuid4().hex[:8]}", "重要通知", 4),
+            (f"msg-{uuid.uuid4().hex[:8]}", "普通通知", 2),
+            (f"msg-{uuid.uuid4().hex[:8]}", "紧急通知", 5),
         ]
         
         rows = []

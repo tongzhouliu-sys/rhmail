@@ -11,7 +11,7 @@ from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-# 设置测试环境变量
+# 设置测试环境变量（必须在导入 app 模块之前）
 os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"
 os.environ["DASHBOARD_PASSWORD"] = "test-password"
 os.environ["DATABASE_URL"] = "sqlite:///./test.db"
@@ -21,20 +21,27 @@ os.environ["GOOGLE_CLIENT_ID"] = "test-client-id"
 os.environ["GOOGLE_CLIENT_SECRET"] = "test-client-secret"
 
 from app.models import Base
-from app.db import SessionLocal
+from app.db import SessionLocal, init_db, engine as app_engine
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_database():
+    """为应用引擎初始化测试数据库（供 FastAPI 端点测试使用）"""
+    init_db()
+    yield
+    # 清理
+    Base.metadata.drop_all(app_engine)
+    if os.path.exists("./test.db"):
+        os.remove("./test.db")
 
 
 @pytest.fixture(scope="function")
 def db_engine():
-    """创建测试数据库引擎"""
+    """创建独立的测试数据库引擎（供模型测试使用）"""
     engine = create_engine("sqlite:///./test.db", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     yield engine
-    Base.metadata.drop_all(engine)
-    engine.dispose()
-    # 清理测试数据库文件
-    if os.path.exists("./test.db"):
-        os.remove("./test.db")
+    # 不 drop_all，因为应用引擎可能还在使用
 
 
 @pytest.fixture(scope="function")
