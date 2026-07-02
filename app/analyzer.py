@@ -1,3 +1,16 @@
+"""
+RHMail AI — LLM 分析器
+
+调用 OpenAI 兼容接口，对邮件进行智能分析：
+- 6 类分类（紧急、金融、法律、重要通知、订阅、社交）
+- 1-5 重要性评分
+- 一句话摘要
+- 结构化要点提取（JSON 格式）
+
+Copyright (c) 2026 RHCLOUD PTE LTD
+Developer: TONGZHOU LIU
+"""
+
 import json
 import httpx
 from app.config import settings

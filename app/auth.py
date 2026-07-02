@@ -1,3 +1,13 @@
+"""
+RHMail AI — 认证模块
+
+基于 itsdangerous 的签名 Cookie 认证，提供密码验证、Token 生成、
+FastAPI 依赖注入（require_auth）等功能。
+
+Copyright (c) 2026 RHCLOUD PTE LTD
+Developer: TONGZHOU LIU
+"""
+
 from fastapi import Cookie, HTTPException, status
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from app.config import settings

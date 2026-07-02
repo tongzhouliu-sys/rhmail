@@ -1,3 +1,13 @@
+"""
+RHMail AI — FastAPI Web 入口
+
+提供 Web 看板的所有路由：登录认证、仪表盘概览、邮件列表与详情、
+日报归档、Gmail 账号管理（OAuth 授权/禁用/删除）、健康检查等。
+
+Copyright (c) 2026 RHCLOUD PTE LTD
+Developer: TONGZHOU LIU
+"""
+
 import logging
 import time
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -58,6 +68,11 @@ _sidebar_cache: dict = {"data": None, "ts": 0.0}
 _SIDEBAR_TTL = 300  # 5 minutes
 
 
+def clear_sidebar_cache():
+    _sidebar_cache["data"] = None
+    _sidebar_cache["ts"] = 0.0
+
+
 def get_sidebar_context(db):
     now = time.monotonic()
     if _sidebar_cache["data"] is not None and now - _sidebar_cache["ts"] < _SIDEBAR_TTL:
@@ -70,10 +85,14 @@ def get_sidebar_context(db):
     important_count = db.scalar(
         select(func.count(AnalysisResult.id)).where(AnalysisResult.importance >= 4)
     ) or 0
+    unread_count = db.scalar(
+        select(func.count(GmailMessage.id)).where(GmailMessage.is_read == False)
+    ) or 0
     result = {
         "categories": CATEGORIES_LIST,
         "by_cat": by_cat,
         "important_count": important_count,
+        "unread_count": unread_count,
     }
     _sidebar_cache["data"] = result
     _sidebar_cache["ts"] = now
@@ -181,6 +200,7 @@ async def emails_page(
     importance: int = Query(0),
     date_from: str = Query(""),
     date_to: str = Query(""),
+    status: str = Query(""),
     page: int = Query(1, ge=1),
 ):
     db = SessionLocal()
@@ -201,6 +221,11 @@ async def emails_page(
             q = q.where(GmailMessage.received_at >= date_from)
         if date_to:
             q = q.where(GmailMessage.received_at <= date_to + " 23:59:59")
+        if status == "unread":
+            q = q.where(GmailMessage.is_read == False)
+        elif status == "read":
+            q = q.where(GmailMessage.is_read == True)
+            
         total = db.scalar(select(func.count()).select_from(q.subquery()))
         rows = db.execute(
             q.order_by(GmailMessage.received_at.desc()).limit(limit).offset((page - 1) * limit)
@@ -217,14 +242,13 @@ async def emails_page(
                 "importance": importance,
                 "date_from": date_from,
                 "date_to": date_to,
+                "status": status,
             },
         }
         ctx.update(get_sidebar_context(db))
         return templates.TemplateResponse("emails.html", ctx)
     finally:
         db.close()
-
-
 
 @app.get("/emails/{pk}", response_class=HTMLResponse, dependencies=[Depends(require_page)])
 async def email_detail(request: Request, pk: int):
@@ -239,6 +263,10 @@ async def email_detail(request: Request, pk: int):
         if not row:
             raise HTTPException(404)
         m, a = row
+        if not m.is_read:
+            m.is_read = True
+            db.commit()
+            clear_sidebar_cache()
         ctx = {
             "request": request,
             "m": m,
@@ -328,6 +356,7 @@ async def api_emails(
     offset: int = 0,
     category: str = "",
     importance: int = 0,
+    status: str = "",
 ):
     db = SessionLocal()
     try:
@@ -340,6 +369,10 @@ async def api_emails(
             q = q.where(AnalysisResult.category == cat_name)
         if importance:
             q = q.where(AnalysisResult.importance == importance)
+        if status == "unread":
+            q = q.where(GmailMessage.is_read == False)
+        elif status == "read":
+            q = q.where(GmailMessage.is_read == True)
         rows = db.execute(
             q.order_by(GmailMessage.received_at.desc()).limit(limit).offset(offset)
         ).all()
@@ -352,9 +385,25 @@ async def api_emails(
                 "category": a.category,
                 "importance": a.importance,
                 "one_line": a.one_line,
+                "is_read": m.is_read,
             }
             for m, a in rows
         ]}
+    finally:
+        db.close()
+
+
+@app.post("/api/emails/{pk}/toggle-read", dependencies=[Depends(require_api)])
+async def toggle_email_read(pk: int):
+    db = SessionLocal()
+    try:
+        m = db.get(GmailMessage, pk)
+        if not m:
+            raise HTTPException(404, "Email not found")
+        m.is_read = not m.is_read
+        db.commit()
+        clear_sidebar_cache()
+        return {"id": m.id, "is_read": m.is_read}
     finally:
         db.close()
 

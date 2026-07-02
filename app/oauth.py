@@ -1,11 +1,21 @@
 """
-Google OAuth 2.0 Web flow for Gmail account authorization.
+RHMail AI — Google OAuth 2.0 授权流程
 
-Provides helpers to:
-1. Build the Google OAuth consent URL (redirect user to Google).
-2. Exchange the authorization code for access + refresh tokens.
-3. Retrieve the authorized Gmail address via the Gmail API.
+实现 Gmail 账号的 OAuth 2.0 Web 授权：
+1. 构建 Google OAuth 同意页面 URL
+2. 处理回调，交换 Access Token / Refresh Token
+3. 刷新过期 Token
+
+Copyright (c) 2026 RHCLOUD PTE LTD
+Developer: TONGZHOU LIU
 """
+
+# Google OAuth 2.0 Web flow for Gmail account authorization.
+#
+# Provides helpers to:
+# 1. Build the Google OAuth consent URL (redirect user to Google).
+# 2. Exchange the authorization code for access + refresh tokens.
+# 3. Retrieve the authorized Gmail address via the Gmail API.
 
 import logging
 import secrets

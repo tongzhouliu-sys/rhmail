@@ -1,3 +1,17 @@
+"""
+RHMail AI — 规则预过滤
+
+在 LLM 分析前，基于规则过滤垃圾邮件：
+- 白名单/黑名单发件人
+- List-Unsubscribe 头检测
+- 营销正则匹配
+
+降低 LLM 调用成本。
+
+Copyright (c) 2026 RHCLOUD PTE LTD
+Developer: TONGZHOU LIU
+"""
+
 from app.config import settings
 
 

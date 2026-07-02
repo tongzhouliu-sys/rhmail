@@ -1,3 +1,11 @@
+<!--
+  RHMail AI — 邮件详情页面
+  
+  单封邮件的完整信息、AI 分析结果
+  
+  Copyright (c) 2026 RHCLOUD PTE LTD
+  Developer: TONGZHOU LIU
+-->
 {% extends "base.html" %}
 {% from "macros.html" import cat_badge %}
 {% block title %}{{ m.subject }} — 邮件详情{% endblock %}
@@ -8,6 +16,10 @@
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
     返回邮件列表
   </a>
+  <button class="btn-action-outline" onclick="markAsUnread({{ m.id }})" style="margin-left:auto; display:flex; align-items:center; gap:0.4rem; padding:6px 14px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; background:transparent; border:1px solid var(--border); color:var(--text-main); transition:var(--transition);" onmouseenter="this.style.background='rgba(255,255,255,0.05)'" onmouseleave="this.style.background='transparent'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+    标记为未读
+  </button>
 </div>
 
 <article class="detail-card">
@@ -71,4 +83,20 @@
   </div>
 </article>
 
+<script>
+  async function markAsUnread(id) {
+    try {
+      const res = await fetch(`/api/emails/${id}/toggle-read`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        window.location.href = "/emails";
+      } else {
+        alert('操作失败');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+</script>
 {% endblock %}

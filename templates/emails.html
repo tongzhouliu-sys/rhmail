@@ -1,3 +1,11 @@
+<!--
+  RHMail AI — 邮件列表页面
+  
+  多维度筛选、浏览所有邮件
+  
+  Copyright (c) 2026 RHCLOUD PTE LTD
+  Developer: TONGZHOU LIU
+-->
 {% extends "base.html" %}
 {% from "macros.html" import cat_icon, cat_badge %}
 {% block title %}邮件列表 — RHMail AI 智能分析{% endblock %}
@@ -26,6 +34,12 @@
       {% endfor %}
     </select>
 
+    <select name="status">
+      <option value="" {% if not f.status %}selected{% endif %}>全部状态</option>
+      <option value="unread" {% if f.status == 'unread' %}selected{% endif %}>未读</option>
+      <option value="read" {% if f.status == 'read' %}selected{% endif %}>已读</option>
+    </select>
+
     <input type="date" name="date_from" value="{{ f.date_from }}" placeholder="起始日期">
     <span class="filter-sep">至</span>
     <input type="date" name="date_to" value="{{ f.date_to }}" placeholder="结束日期">
@@ -42,10 +56,13 @@
 <div class="gmail-table-container">
   <ul class="gmail-email-list">
     {% for m, a in rows %}
-    <li class="gmail-email-row">
+    <li class="gmail-email-row {% if not m.is_read %}is-unread{% endif %}">
       <a href="/emails/{{ m.id }}" class="gmail-row-link">
-        <!-- 1. 重要度标星图标 -->
+        <!-- 1. 重要度标星图标与已读未读状态 -->
         <div class="row-star">
+          <span class="unread-dot {% if m.is_read %}read-dot-hidden{% endif %}" 
+                title="点击标记为{% if m.is_read %}未读{% else %}已读{% endif %}"
+                onclick="toggleReadStatus({{ m.id }}, event)"></span>
           <span class="imp imp{{ a.importance }}" title="重要度 Level {{ a.importance }}">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
             {{ a.importance }}
@@ -88,13 +105,33 @@
 {% if pages > 1 %}
 <nav class="pager">
   {% if page > 1 %}
-  <a href="?category={{ f.category }}&importance={{ f.importance }}&date_from={{ f.date_from }}&date_to={{ f.date_to }}&page={{ page - 1 }}">&larr; 上一页</a>
+  <a href="?category={{ f.category }}&importance={{ f.importance }}&date_from={{ f.date_from }}&date_to={{ f.date_to }}&status={{ f.status }}&page={{ page - 1 }}">&larr; 上一页</a>
   {% endif %}
   <span>第 {{ page }} / {{ pages }} 页</span>
   {% if page < pages %}
-  <a href="?category={{ f.category }}&importance={{ f.importance }}&date_from={{ f.date_from }}&date_to={{ f.date_to }}&page={{ page + 1 }}">下一页 &rarr;</a>
+  <a href="?category={{ f.category }}&importance={{ f.importance }}&date_from={{ f.date_from }}&date_to={{ f.date_to }}&status={{ f.status }}&page={{ page + 1 }}">下一页 &rarr;</a>
   {% endif %}
 </nav>
 {% endif %}
 
+<script>
+  async function toggleReadStatus(id, event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    try {
+      const res = await fetch(`/api/emails/${id}/toggle-read`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        alert('操作失败');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+</script>
 {% endblock %}

@@ -1,3 +1,15 @@
+"""
+RHMail AI — Gmail API 客户端
+
+实现 Gmail 邮件的增量同步：
+- 使用 History API 进行低延迟增量拉取
+- 支持时间戳回溯作为降级方案
+- 解析邮件信头、提取正文
+
+Copyright (c) 2026 RHCLOUD PTE LTD
+Developer: TONGZHOU LIU
+"""
+
 import base64
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime, parseaddr

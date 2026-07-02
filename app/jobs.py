@@ -1,3 +1,16 @@
+"""
+RHMail AI — 后台任务 CLI 入口
+
+提供独立的命令行任务：
+- fetch: 拉取并分析邮件（增量同步 + LLM 分析）
+- digest: 生成每日摘要
+
+设计为独立进程，适配 Railway Crons 等云定时调度。
+
+Copyright (c) 2026 RHCLOUD PTE LTD
+Developer: TONGZHOU LIU
+"""
+
 import asyncio
 import logging
 import sys

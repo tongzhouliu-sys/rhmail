@@ -1,3 +1,15 @@
+"""
+RHMail AI — HTML 清洗与正文提取
+
+将 HTML 邮件转换为纯文本：
+- 移除引用、签名、图片
+- 截断正文至指定长度
+- 提取结构化摘要
+
+Copyright (c) 2026 RHCLOUD PTE LTD
+Developer: TONGZHOU LIU
+"""
+
 import html
 import json
 import re

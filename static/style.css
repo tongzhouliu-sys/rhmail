@@ -948,18 +948,72 @@ h2::before {
 }
 
 .row-star {
-  width: 50px;
+  width: 72px; /* widened to hold dot + star badge */
   flex-shrink: 0;
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
+.unread-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background-color: var(--primary);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 8px var(--primary);
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.unread-dot:hover {
+  transform: scale(1.3);
+}
+
+.read-dot-hidden {
+  opacity: 0.15;
+  background-color: var(--text-dim);
+  box-shadow: none;
+}
+
+.read-dot-hidden:hover {
+  opacity: 1;
+  background-color: var(--primary);
+  box-shadow: 0 0 8px var(--primary);
+}
+
+/* Default (read or normal state) text styling */
+.gmail-email-row:not(.is-unread) .row-sender {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.gmail-email-row:not(.is-unread) .row-subject {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.gmail-email-row:not(.is-unread) .row-snippet {
+  color: var(--text-dim);
+}
+
+/* Unread text styling */
+.gmail-email-row.is-unread .row-sender {
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.gmail-email-row.is-unread .row-subject {
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+/* Keep basic sizing and truncation settings */
 .row-sender {
   width: 180px;
   flex-shrink: 0;
-  font-weight: 700;
   font-size: 13.5px;
-  color: var(--text-main);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -979,9 +1033,7 @@ h2::before {
 }
 
 .row-subject {
-  font-weight: 600;
   font-size: 13.5px;
-  color: var(--text-main);
   flex-shrink: 0;
   max-width: 50%;
   overflow: hidden;

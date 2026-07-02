@@ -1,3 +1,16 @@
+"""
+RHMail AI — ORM 数据模型
+
+定义 4 张核心表：
+- GmailAccount: Gmail 账号凭证与同步状态
+- GmailMessage: 邮件消息（含信头、清洗后正文）
+- AnalysisResult: AI 分析结果（分类、评分、摘要、要点）
+- DailyDigest: 每日 Markdown 摘要
+
+Copyright (c) 2026 RHCLOUD PTE LTD
+Developer: TONGZHOU LIU
+"""
+
 from datetime import datetime
 from sqlalchemy import (
     Integer, String, Text, Boolean, DateTime, ForeignKey, UniqueConstraint, Index
@@ -37,6 +50,7 @@ class GmailMessage(Base):
     body_text: Mapped[str] = mapped_column(Text, default="")
     received_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     is_filtered: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     account: Mapped["GmailAccount"] = relationship(back_populates="messages")
     analysis: Mapped["AnalysisResult"] = relationship(back_populates="message", uselist=False)

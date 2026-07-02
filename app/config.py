@@ -1,3 +1,13 @@
+"""
+RHMail AI — 全局配置
+
+从环境变量读取所有配置项，使用 dataclass 统一管理。
+包括 Google OAuth、LLM、数据库、认证、行为参数等。
+
+Copyright (c) 2026 RHCLOUD PTE LTD
+Developer: TONGZHOU LIU
+"""
+
 import os
 import sys
 import logging

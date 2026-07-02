@@ -1,3 +1,15 @@
+"""
+RHMail AI — 每日摘要生成器
+
+生成 Markdown 格式的每日邮件摘要：
+- 按分类分组
+- 按重要性排序
+- 包含统计信息与要点汇总
+
+Copyright (c) 2026 RHCLOUD PTE LTD
+Developer: TONGZHOU LIU
+"""
+
 from collections import defaultdict
 
 from app.cleaner import summary_plaintext

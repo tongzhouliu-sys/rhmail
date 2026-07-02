@@ -1,3 +1,13 @@
+"""
+RHMail AI — 数据库引擎与会话管理
+
+创建 SQLAlchemy 引擎、会话工厂，提供自动迁移功能（启动时检测并添加缺失字段）。
+支持 SQLite（默认）和 PostgreSQL。
+
+Copyright (c) 2026 RHCLOUD PTE LTD
+Developer: TONGZHOU LIU
+"""
+
 import logging
 
 from sqlalchemy import create_engine, inspect
