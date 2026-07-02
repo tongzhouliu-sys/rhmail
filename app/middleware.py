@@ -122,11 +122,34 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    """请求 ID 追踪中间件
+    
+    为每个请求生成唯一 ID，用于日志追踪和调试。
+    """
+    
+    async def dispatch(self, request: Request, call_next: Callable):
+        from app.logging_config import generate_request_id, request_id_var
+        
+        # 生成或使用现有的请求 ID
+        request_id = request.headers.get("x-request-id") or generate_request_id()
+        token = request_id_var.set(request_id)
+        
+        try:
+            response = await call_next(request)
+            response.headers["x-request-id"] = request_id
+            return response
+        finally:
+            request_id_var.reset(token)
+
+
 def add_security_middleware(app):
     """为 FastAPI 应用添加安全中间件"""
-    # 先添加速率限制（外层）
+    # 先添加请求 ID（最外层）
+    app.add_middleware(RequestIDMiddleware)
+    # 再添加速率限制
     app.add_middleware(RateLimitMiddleware, max_requests=100, window_seconds=60)
     # 再添加 CSRF（内层）
     app.add_middleware(CSRFMiddleware)
     
-    log.info("安全中间件已加载：CSRF 保护 + 速率限制")
+    log.info("安全中间件已加载：请求 ID + CSRF 保护 + 速率限制")
