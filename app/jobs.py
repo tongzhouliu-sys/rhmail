@@ -74,6 +74,8 @@ async def fetch_and_analyze() -> None:  # noqa: C901
                         message_id=msg["message_id"],
                         from_email=msg["from_email"],
                         from_name=msg["from_name"],
+                        to_email=msg.get("to_email", ""),
+                        to_name=msg.get("to_name", ""),
                         subject=msg["subject"],
                         received_at=msg["received_at"],
                         is_filtered=filtered,

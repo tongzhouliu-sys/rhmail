@@ -19,6 +19,14 @@
       {{ m.from_name }} &lt;{{ m.from_email }}&gt;
     </span>
     <span>
+      <strong style="color:var(--text-main);">收件人：</strong>
+      {% if m.to_email %}
+        {% if m.to_name %}{{ m.to_name }} &lt;{{ m.to_email }}&gt;{% else %}{{ m.to_email }}{% endif %}
+      {% else %}
+        {{ m.account.email }}
+      {% endif %}
+    </span>
+    <span>
       <strong style="color:var(--text-main);">接收时间：</strong>
       {{ m.received_at.strftime('%Y-%m-%d %H:%M') if m.received_at else '' }}
     </span>

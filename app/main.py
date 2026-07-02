@@ -232,6 +232,7 @@ async def email_detail(request: Request, pk: int):
     try:
         row = db.execute(
             select(GmailMessage, AnalysisResult)
+            .options(joinedload(GmailMessage.account))
             .join(AnalysisResult, AnalysisResult.message_pk == GmailMessage.id)
             .where(GmailMessage.id == pk)
         ).first()

@@ -31,6 +31,8 @@ class GmailMessage(Base):
     message_id: Mapped[str] = mapped_column(String(64))
     from_email: Mapped[str] = mapped_column(String(320), default="")
     from_name: Mapped[str] = mapped_column(String(320), default="")
+    to_email: Mapped[str] = mapped_column(String(320), default="")
+    to_name: Mapped[str] = mapped_column(String(320), default="")
     subject: Mapped[str] = mapped_column(Text, default="")
     body_text: Mapped[str] = mapped_column(Text, default="")
     received_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

@@ -50,6 +50,7 @@ def _parse_message(svc, message_id: str) -> dict:
     msg = svc.users().messages().get(userId="me", id=message_id, format="full").execute()
     headers = {h["name"].lower(): h["value"] for h in msg["payload"].get("headers", [])}
     name, addr = parseaddr(headers.get("from", ""))
+    to_name, to_addr = parseaddr(headers.get("to", ""))
     text, html = _extract_body(msg["payload"])
     try:
         received = parsedate_to_datetime(headers.get("date", "")) if headers.get("date") else None
@@ -61,6 +62,8 @@ def _parse_message(svc, message_id: str) -> dict:
         "message_id": message_id,
         "from_email": addr or "",
         "from_name": name or "",
+        "to_email": to_addr or "",
+        "to_name": to_name or "",
         "subject": headers.get("subject", "(无主题)"),
         "list_unsubscribe": headers.get("list-unsubscribe", ""),
         "body_text": text,
