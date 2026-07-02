@@ -41,6 +41,35 @@ templates.env.filters["clean_text"] = clean_text
 templates.env.filters["markdown"] = render_markdown
 templates.env.filters["render_summary"] = render_summary
 
+
+# ---------- 全局异常处理 ----------
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """捕获所有未处理的异常，记录日志并返回友好错误响应"""
+    log.exception("Unhandled exception: %s", exc)
+    
+    # API 端点返回 JSON
+    if request.url.path.startswith("/api/"):
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "服务器内部错误，请稍后重试"},
+        )
+    
+    # 页面端点返回 HTML
+    return HTMLResponse(
+        status_code=500,
+        content="""
+        <html>
+        <head><title>500 - 服务器错误</title></head>
+        <body style="font-family: sans-serif; padding: 40px;">
+            <h1>服务器内部错误</h1>
+            <p>抱歉，服务器遇到了一个问题。请稍后重试或联系管理员。</p>
+            <p><a href="/">返回首页</a></p>
+        </body>
+        </html>
+        """,
+    )
+
 CATEGORY_MAP = {
     "urgent": "紧急·需回复",
     "finance": "金融·账户告警",
